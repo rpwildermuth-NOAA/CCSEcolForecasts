@@ -1,10 +1,4 @@
-# SWFSC-Template
-
-The README provides a description of the repository. The README file will vary greatly depending on the repo contents. 
-
-## License
-
-User task: Choose an open source license, depending on the repo contents and the [latest NMFS guidance](https://nmfs-opensci.github.io/GitHub-Guide/#sec-license). You do not need to keep this 'License' section in your repo readme.
+# Climate-Informed Ecological Forecasts for the California Current System
 
 ## Disclaimer
 
