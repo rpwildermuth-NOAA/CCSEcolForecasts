@@ -5,15 +5,12 @@
 # Based on previous code from Karin Forney, Heather Welch, Steph Brodie, and others
 # Requires an input data frame with columns labeled "lon" (degrees west), "lat", and "date" (formatted as dates)
 # Note! In response to past inconsistencies, desired.resolution has been replaced with desired.diameter
-# Thus desired.diameter = 0.7 results in a 7x7 (= 49 pixel) box around the central location
+# Thus desired.diameter = 0.7 (degrees) results in a 7x7 (= 49 pixel) box around the central location
 # Contact Barbara.Muhling@noaa.gov
 ###########################################################################################################
 
-require(lunar)
 require(ncdf4)
 require(lubridate)
-require(plyr)
-require(dplyr)
 
 ###########################################################################################################
 # # Testing function
@@ -21,7 +18,7 @@ require(dplyr)
 #                      "lat" = c(45, 34, 32, 40, 45, 34, 32, 40, 36, 41),
 #                      "date" = seq(as.Date("2008-08-15"), as.Date("2017-08-15"), by = "year"))
 # varName <- "bv"
-# desired.diameter <- 0.7 # Note! This means a 0.7x0.7 or 49 pixel box
+# desired.diameter <- 0.7 # Note! This means a 7x7 or 49 pixel box
 # func <- "mean" # mean or sd
 # histPath <- "F:/roms/hist" # As some folks might have them mixed together, I use subfolders...
 # nrtPath <- "F:/roms/nrtComplete"
@@ -122,6 +119,7 @@ getROMS <- function(points, varName, desired.diameter, func = "mean", histPath, 
   # Loop through points to extract desired variable at correct spatial resolution
   # Also get mean or stdev, depending on inputs to fn
   # Add new columns as needed to receive calculated values
+  # The number in the column title is the diameter in degrees
   if(func == "mean") {
     points$mn <- NA
     colnames(points)[ncol(points)] <- paste0(varName, "_", "mean", "_", desired.diameter)
