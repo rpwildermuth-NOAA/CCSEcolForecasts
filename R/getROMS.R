@@ -14,14 +14,15 @@ require(lubridate)
 
 ###########################################################################################################
 # # Testing function
-# points <- data.frame("lon" = c(-130, -125, -124, -130, -125, -124, -130, -125, -124, -126),
-#                      "lat" = c(45, 34, 32, 40, 45, 34, 32, 40, 36, 41),
-#                      "date" = seq(as.Date("2008-08-15"), as.Date("2017-08-15"), by = "year"))
-# varName <- "bv"
+# points <- data.frame(expand.grid("lon" = seq(-132, -122, by = 2), "lat" = seq(32, 40, by = 2),
+#                                  "date" = seq(as.Date("2009-06-15"), as.Date("2017-06-15"), by = "month")))
+# varName <- "sst"
 # desired.diameter <- 0.7 # Note! This means a 7x7 or 49 pixel box
-# func <- "mean" # mean or sd
+# func <- "sd" # mean or sd
 # histPath <- "F:/roms/hist" # As some folks might have them mixed together, I use subfolders...
 # nrtPath <- "F:/roms/nrtComplete"
+# testroms <- getROMS(points = points, varName = varName, desired.diameter = desired.diameter, func = func, 
+#                 histPath = histPath, nrtPath = nrtPath)
 
 ###########################################################################################################
 getROMS <- function(points, varName, desired.diameter, func = "mean", histPath, nrtPath) {
@@ -123,10 +124,14 @@ getROMS <- function(points, varName, desired.diameter, func = "mean", histPath, 
   if(func == "mean") {
     points$mn <- NA
     colnames(points)[ncol(points)] <- paste0(varName, "_", "mean", "_", desired.diameter)
+    points$count <- NA
+    colnames(points)[ncol(points)] <- paste0(varName, "_", "count", "_", desired.diameter)
   }
   if(func == "sd") {
     points$sd <- NA
     colnames(points)[ncol(points)] <- paste0(varName, "_", "sd", "_", desired.diameter)
+    points$count <- NA
+    colnames(points)[ncol(points)] <- paste0(varName, "_", "count", "_", desired.diameter)
   }
   
   # Check that point is within spatiotemporal range (including pixel window)
@@ -160,9 +165,11 @@ getROMS <- function(points, varName, desired.diameter, func = "mean", histPath, 
                                 count = c(numcols, numrows, 1), verbose = FALSE)
       if(!is.na(mean(data.var, na.rm = TRUE))) {
         if (func == "mean") {
-          points[i, ncol(points)] <- mean(data.var, na.rm = TRUE)
+          points[i, ncol(points) - 1] <- mean(data.var, na.rm = TRUE)
+          points[i, ncol(points)] <- sum(!is.na(data.var)) 
         } else if (func == "sd") {
-          points[i, ncol(points)] <- sd(data.var, na.rm = TRUE)
+          points[i, ncol(points) - 1] <- sd(data.var, na.rm = TRUE)
+          points[i, ncol(points)] <- sum(!is.na(data.var))
         }
       }
     } 
@@ -184,9 +191,11 @@ getROMS <- function(points, varName, desired.diameter, func = "mean", histPath, 
                                count = c(numcols, numrows, 1), verbose = FALSE)
        if(!is.na(mean(data.var, na.rm = TRUE))) {
          if (func == "mean") {
-           points[i, ncol(points)] <- mean(data.var, na.rm = TRUE)
+           points[i, ncol(points) - 1] <- mean(data.var, na.rm = TRUE)
+           points[i, ncol(points)] <- sum(!is.na(data.var)) 
          } else if (func == "sd") {
-           points[i, ncol(points)] <- sd(data.var, na.rm = TRUE)
+           points[i, ncol(points) - 1] <- sd(data.var, na.rm = TRUE)
+           points[i, ncol(points)] <- sum(!is.na(data.var)) 
          }
        }
      } 
