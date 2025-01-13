@@ -32,7 +32,7 @@ getROMS <- function(points, varName, desired.diameter, func = "mean", histPath, 
   }
   # Check that date column is formatted as such
   if(!inherits(points$date, 'Date')) {
-   stop("Date column is not formatted as dates")
+    stop("Date column is not formatted as dates")
   }
   
   #########################################################################################################
@@ -51,10 +51,13 @@ getROMS <- function(points, varName, desired.diameter, func = "mean", histPath, 
     histFile <- intersect(list.files(path = histPath, pattern = "1980.*nc"),
                           list.files(path = histPath, pattern = "bv|BV|bv_200|bf"))
     nrtFile <- intersect(list.files(path = nrtPath, pattern = "2011.*nc"),
-                          list.files(path = nrtPath,  pattern = "bv|BV|bv_200|bf"))
+                         list.files(path = nrtPath,  pattern = "bv|BV|bv_200|bf"))
     # And specify the correct name for the variable!
     varNameHist <- "BV_frequency"
     varNameNrt <- "bbv_200"
+  } else if (varName == "ild") { # ild is called "ild_05" in NRT netcdf
+    varNameHist <- "ild"
+    varNameNrt <- "ild_05"
   } else {
     varNameHist <-varNameNrt <- varName
   }
@@ -63,13 +66,13 @@ getROMS <- function(points, varName, desired.diameter, func = "mean", histPath, 
   if(length(c(histFile, nrtFile)) != 2) {
     stop("Incorrect number of files: there should be one historical and one NRT file")
   }
-
+  
   #########################################################################################################
   #################################### Open the correct netcdfs ###########################################
   #########################################################################################################
   # Open netcdfs required based on date range of input points
-  minDatePnts <- min(points$date)
-  maxDatePnts <- max(points$date)
+  minDatePnts <- min(points$date, na.rm = TRUE)
+  maxDatePnts <- max(points$date, na.rm = TRUE)
   if(minDatePnts <= as.Date("2010-12-31")) {
     histnc <- nc_open(paste0(histPath, "/", histFile))
     histOpen <- TRUE
@@ -144,7 +147,7 @@ getROMS <- function(points, varName, desired.diameter, func = "mean", histPath, 
   # Loop through points
   for (i in 1:nrow(points)) {
     if(points$lon[i] < minLon | points$lon[i] > maxLon | points$lat[i] < minLat | points$lat[i] > maxLat |
-        points$date[i] < minDate | points$date[i] > maxDate) {
+       points$date[i] < minDate | points$date[i] > maxDate | is.na(points$date[i]) | is.na(points$lon[i]) | is.na(points$lat[i])) {
       next
     }
     # If point is in spatiotemporal range, proceed
@@ -162,7 +165,7 @@ getROMS <- function(points, varName, desired.diameter, func = "mean", histPath, 
       
       # Extract
       data.var  <-  ncvar_get(histnc, varNameHist, start = c(c_low, r_low, xdate), # Point or 2D matrix
-                                count = c(numcols, numrows, 1), verbose = FALSE)
+                              count = c(numcols, numrows, 1), verbose = FALSE)
       if(!is.na(mean(data.var, na.rm = TRUE))) {
         if (func == "mean") {
           points[i, ncol(points) - 1] <- mean(data.var, na.rm = TRUE)
@@ -173,32 +176,32 @@ getROMS <- function(points, varName, desired.diameter, func = "mean", histPath, 
         }
       }
     } 
-      
+    
     # If point is in NRT date range: 
-     if(points$date[i] %in% nrtDims$time) {
-       xdate <- which(points$date[i] == nrtDims$time)
-       c <- which.min(abs(nrtDims$lon - points$lon[i]))
-       c_low <- which.min(abs(nrtDims$lon - (points$lon[i] - (desired.diameter - 0.1) / 2))) 
-       c_up <- which.min(abs(nrtDims$lon - (points$lon[i] + (desired.diameter - 0.1) / 2))) 
-       r <- which.min(abs(nrtDims$lat - points$lat[i]))
-       r_low <- which.min(abs(nrtDims$lat - (points$lat[i] - (desired.diameter - 0.1) / 2)))
-       r_up <- which.min(abs(nrtDims$lat - (points$lat[i] + (desired.diameter - 0.1) / 2)))
-       numcols = abs(c_up - c_low) + 1 
-       numrows = abs(r_up - r_low) + 1
-       
-       # Extract
-       data.var  <-  ncvar_get(nrtnc, varNameNrt, start = c(c_low, r_low, xdate), # Point or 2D matrix
-                               count = c(numcols, numrows, 1), verbose = FALSE)
-       if(!is.na(mean(data.var, na.rm = TRUE))) {
-         if (func == "mean") {
-           points[i, ncol(points) - 1] <- mean(data.var, na.rm = TRUE)
-           points[i, ncol(points)] <- sum(!is.na(data.var)) 
-         } else if (func == "sd") {
-           points[i, ncol(points) - 1] <- sd(data.var, na.rm = TRUE)
-           points[i, ncol(points)] <- sum(!is.na(data.var)) 
-         }
-       }
-     } 
+    if(points$date[i] %in% nrtDims$time) {
+      xdate <- which(points$date[i] == nrtDims$time)
+      c <- which.min(abs(nrtDims$lon - points$lon[i]))
+      c_low <- which.min(abs(nrtDims$lon - (points$lon[i] - (desired.diameter - 0.1) / 2))) 
+      c_up <- which.min(abs(nrtDims$lon - (points$lon[i] + (desired.diameter - 0.1) / 2))) 
+      r <- which.min(abs(nrtDims$lat - points$lat[i]))
+      r_low <- which.min(abs(nrtDims$lat - (points$lat[i] - (desired.diameter - 0.1) / 2)))
+      r_up <- which.min(abs(nrtDims$lat - (points$lat[i] + (desired.diameter - 0.1) / 2)))
+      numcols = abs(c_up - c_low) + 1 
+      numrows = abs(r_up - r_low) + 1
+      
+      # Extract
+      data.var  <-  ncvar_get(nrtnc, varNameNrt, start = c(c_low, r_low, xdate), # Point or 2D matrix
+                              count = c(numcols, numrows, 1), verbose = FALSE)
+      if(!is.na(mean(data.var, na.rm = TRUE))) {
+        if (func == "mean") {
+          points[i, ncol(points) - 1] <- mean(data.var, na.rm = TRUE)
+          points[i, ncol(points)] <- sum(!is.na(data.var)) 
+        } else if (func == "sd") {
+          points[i, ncol(points) - 1] <- sd(data.var, na.rm = TRUE)
+          points[i, ncol(points)] <- sum(!is.na(data.var)) 
+        }
+      }
+    } 
     # Status indicator for large datasets
     if((i - 100) %% 100 == 0) {
       print(paste0(i, " points complete"))
@@ -206,10 +209,10 @@ getROMS <- function(points, varName, desired.diameter, func = "mean", histPath, 
   } 
   # Close open files
   if(histOpen == TRUE) {
-      nc_close(histnc)
+    nc_close(histnc)
   }
   if(nrtOpen == TRUE) {
-      nc_close(nrtnc) 
+    nc_close(nrtnc) 
   }
   return(points)
 } 
