@@ -133,7 +133,7 @@ getCMEMS_l4chl <- function(points, desired.diameter, func = "mean", nc.path) {
       }
     nc_close(dataFile)
     if((i - 100) %% 100 == 0) {
-      print(paste0(y, " points complete"))
+      print(paste0(i, " points complete"))
     }
    } 
   } # end i loop

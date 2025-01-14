@@ -16,9 +16,9 @@ require(lubridate)
 # # Testing function
 # points <- data.frame(expand.grid("lon" = seq(-132, -122, by = 2), "lat" = seq(32, 40, by = 2),
 #                                  "date" = seq(as.Date("2009-06-15"), as.Date("2017-06-15"), by = "month")))
-# varName <- "sst"
-# desired.diameter <- 0.7 # Note! This means a 7x7 or 49 pixel box
-# func <- "sd" # mean or sd
+# varName <- "su"
+# desired.diameter <- 0.1 # Note! This means a 7x7 or 49 pixel box
+# func <- "mean" # mean or sd
 # histPath <- "F:/roms/hist" # As some folks might have them mixed together, I use subfolders...
 # nrtPath <- "F:/roms/nrtComplete"
 # testroms <- getROMS(points = points, varName = varName, desired.diameter = desired.diameter, func = func,
@@ -46,9 +46,9 @@ getROMS <- function(points, varName, desired.diameter, func = "mean", histPath, 
   # Should work whether stored in same or different directories, 
   # as long as e.g. several versions of NRT netcdfs aren't mixed in together
   histFile <- intersect(list.files(path = histPath, pattern = "1980.*nc"),
-                        list.files(path = histPath, pattern = varName))
+                        list.files(path = histPath, pattern = paste0(varName, "_")))
   nrtFile <- intersect(list.files(path = nrtPath, pattern = "2011.*nc"),
-                       list.files(path = nrtPath, pattern = varName))
+                       list.files(path = nrtPath, pattern = paste0(varName, "_")))
   
   # Catch for BV/BF being called different things: in my hist ROMs filename contains "BV", NRT contains "bbv_200"
   if(varName == "bv" | varName == "BV" | varName == "bv_200" | varName == "bf" | varName == "BV_frequency") {
