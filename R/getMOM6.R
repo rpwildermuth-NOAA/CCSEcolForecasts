@@ -28,7 +28,7 @@ require(dplyr)
 # varName <- "tos"
 # desired.diameter <- 0.7 # Note! This means a 0.7x0.7 degree box
 # timestep <- "daily"
-# func = "mean"
+# func = "mean" # "mean" or "sd"
 # nc.path <- "F:/mom6/"
 # # Remove cnk if testing code, causes issues
 # suppressWarnings(rm(cnk))
