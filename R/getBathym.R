@@ -12,12 +12,12 @@ require(rerddap)
 require(rerddapXtracto)
 
 ###########################################################################################################
-# Testing function
-points <- data.frame(expand.grid("lon" = seq(-132, -122, by = 2), "lat" = seq(32, 40, by = 2),
-                                 "date" = seq(as.Date("2009-06-15"), as.Date("2017-06-15"), by = "month")))
-desired.diameter <- 0.7 # Note! This means a 0.7x0.7 degree box
-func = "mean" # "mean" or "sd"
-testbathym <- getBathym(points = points, desired.diameter = desired.diameter, func = func)
+# # Testing function
+# points <- data.frame(expand.grid("lon" = seq(-132, -122, by = 2), "lat" = seq(32, 40, by = 2),
+#                                  "date" = seq(as.Date("2009-06-15"), as.Date("2017-06-15"), by = "month")))
+# desired.diameter <- 0.7 # Note! This means a 0.7x0.7 degree box
+# func = "mean" # "mean" or "sd"
+# testbathym <- getBathym(points = points, desired.diameter = desired.diameter, func = func)
 
 ###########################################################################################################
 
