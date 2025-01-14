@@ -21,7 +21,7 @@ require(lubridate)
 # func <- "sd" # mean or sd
 # histPath <- "F:/roms/hist" # As some folks might have them mixed together, I use subfolders...
 # nrtPath <- "F:/roms/nrtComplete"
-# testroms <- getROMS(points = points, varName = varName, desired.diameter = desired.diameter, func = func, 
+# testroms <- getROMS(points = points, varName = varName, desired.diameter = desired.diameter, func = func,
 #                 histPath = histPath, nrtPath = nrtPath)
 
 ###########################################################################################################
@@ -33,6 +33,10 @@ getROMS <- function(points, varName, desired.diameter, func = "mean", histPath, 
   # Check that date column is formatted as such
   if(!inherits(points$date, 'Date')) {
     stop("Date column is not formatted as dates")
+  }
+  # If desired.diameter is smaller than native resolution, set to native resolution
+  if(desired.diameter < 0.1) {
+    desired.diameter <- 0.1
   }
   
   #########################################################################################################
@@ -155,13 +159,21 @@ getROMS <- function(points, varName, desired.diameter, func = "mean", histPath, 
     if(points$date[i] %in% histDims$time) {
       xdate <- which(points$date[i] == histDims$time)
       c <- which.min(abs(histDims$lon - points$lon[i]))
-      c_low <- which.min(abs(histDims$lon - (points$lon[i] - (desired.diameter - 0.1) / 2))) 
-      c_up <- which.min(abs(histDims$lon - (points$lon[i] + (desired.diameter - 0.1) / 2))) 
+      c_low <- which.min(abs(histDims$lon - (points$lon[i] - (desired.diameter - 0.099) / 2))) 
+      c_up <- which.min(abs(histDims$lon - (points$lon[i] + (desired.diameter - 0.099) / 2))) 
       r <- which.min(abs(histDims$lat - points$lat[i]))
-      r_low <- which.min(abs(histDims$lat - (points$lat[i] - (desired.diameter - 0.1) / 2)))
-      r_up <- which.min(abs(histDims$lat - (points$lat[i] + (desired.diameter - 0.1) / 2)))
+      r_low <- which.min(abs(histDims$lat - (points$lat[i] - (desired.diameter - 0.099) / 2)))
+      r_up <- which.min(abs(histDims$lat - (points$lat[i] + (desired.diameter - 0.099) / 2)))
       numcols = abs(c_up - c_low) + 1 
       numrows = abs(r_up - r_low) + 1
+      # If desired.diameter is even (e.g. 0.2), we end up with a odd x odd box (as ROMS resolution is 0.1)
+      # Fix by just trimming off southwest rows
+      if(((desired.diameter * 10) %% 2) == 0) { # i.e. is an even number
+        c_low <- c_low + 1
+        r_low <- r_low + 1
+        numcols <- numcols - 1
+        numrows <- numrows - 1
+      }
       
       # Extract
       data.var  <-  ncvar_get(histnc, varNameHist, start = c(c_low, r_low, xdate), # Point or 2D matrix

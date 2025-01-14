@@ -36,6 +36,11 @@ getCMEMS_l4chl <- function(points, desired.diameter, func = "mean", nc.path) {
     stop("Date column is not formatted as dates")
   }
   
+  # If desired.diameter is smaller than native resolution, set to native resolution
+  if(desired.diameter < 0.0417) {
+    desired.diameter <- 0.0417
+  }
+  
   # Define point locations, add a lon360 column (degrees east)
   # This allows us to extract points across the dateline if needed
   points$lon360 <- ifelse(points$lon < 0, points$lon + 360, points$lon)
