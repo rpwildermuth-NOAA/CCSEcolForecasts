@@ -78,4 +78,4 @@ predator <- predator[c("survey", "cruise", "haul", "lon", "lat", "date", "anchPA
 allData <- rbind(cpsAnch, predator)
 # Add a unique ID
 allData$id <- seq(1:nrow(allData))
-saveRDS(allData, here::here(dataPath, "combinedBioObs.rds"))
+saveRDS(allData, "./data/combinedBioObs.rds")
