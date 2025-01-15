@@ -70,10 +70,16 @@ getCMEMS_l4chl <- function(points, desired.diameter, func = "mean", nc.path) {
                        fishyear[i], fishmonth[i], fishday[i], 
                        "_cmems_obs-oc_glo_bgc-plankton_my_l4-gapfree-multi-4km_P1D.nc") 
     
-    # There are a few files missing for some earlier years (before ~ 2000)
+    # Some newer files have a slightly different filename: add a catch for that
+    dataPath2 <- paste0(nc.path, "cmems/l4Chl/globalUpdated/", fishyear[i], "/", fishmonth[i], "/", 
+                       fishyear[i], fishmonth[i], fishday[i], 
+                       "_cmems_obs-oc_glo_bgc-plankton_myint_l4-gapfree-multi-4km_P1D.nc") 
+    
     if(file.exists(dataPath)) {
       dataFile <- nc_open(dataPath) # 1-2 secs
-    } else {
+    } else if(file.exists(dataPath2)) {
+      dataFile <- nc_open(dataPath2)
+    } else { # There are a few files missing entirely for some earlier years (before ~ 2000), skip those points
       next
     }
     # print(dataFile)

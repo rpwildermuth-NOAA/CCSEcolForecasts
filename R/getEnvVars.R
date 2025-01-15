@@ -7,6 +7,7 @@ library(here)
 library(sf)
 library(lubridate)
 library(dplyr)
+library(tidyr)
 
 # Define the path where biological observations are (mine are outside the project)
 parent <- here() %>% dirname()
@@ -26,7 +27,7 @@ obs <- readRDS(here::here(dataPath, "combinedBioObs.rds"))
 # ROMs: ild, sst, logEKE (really TKE), sst_sd (0.7 degrees), ssh_sd (0.7 degrees)
 # CMEMS: surface chl
 # SSB (Hinchliffe et al.)
-# Distance from nearest land (uses a saved spatial layer)
+# Distance from nearest land (relative to a coastline shapefile)
 ###########################################################################################################
 # ROMS variables
 source("./R/getROMS.R")
