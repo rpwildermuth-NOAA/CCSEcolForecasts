@@ -69,6 +69,12 @@ distLand <- getDistLand(points = obs, coast = coast)
 obs$distLand <- distLand$distLand
 
 ###########################################################################################################
+# Bathymetry
+source("./R/getBathym.R")
+bathym <- getBathym(points = obs, desired.diameter = 0.1, func = "mean")
+obs$bathym <- bathym$bathym_mean_0.1
+
+###########################################################################################################
 # Anchovy SSB (from Hinchliffe et al. 2025)
 anch <- read.csv(here::here(dataPath, "Hinchliffe_CSNA_timeseries_19652023.csv"))
 anch$year <- anch$Model.Y.S
