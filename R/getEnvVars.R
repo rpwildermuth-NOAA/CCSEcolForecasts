@@ -9,15 +9,15 @@ library(lubridate)
 library(dplyr)
 library(tidyr)
 
-# Define the path where biological observations are (mine are outside the project)
-parent <- here() %>% dirname()
-dataPath <- here::here(parent, "cefi", "reforecast", "data")
+# # Define the path where biological observations are (now contained inside the project)
+# parent <- here() %>% dirname()
+# dataPath <- here::here(parent, "cefi", "reforecast", "data")
 
 ###########################################################################################################
 # Load biological observations
 # They should have columns labelled "lon" (longitude), "lat" (latitude) and "date" (date in R format)
 #(If you load a csv, you may need to re-format the date)
-obs <- readRDS(here::here(dataPath, "combinedBioObs.rds"))
+obs <- readRDS("./data/combinedBioObs.rds")
 
 ###########################################################################################################
 # Use a series of external functions to extract desired environmental predictors
@@ -87,4 +87,4 @@ obs <- left_join(obs, anch[c("year", "anchssb")], by = "year")
 
 ###########################################################################################################
 # Save observations with environmental variables extracted
-saveRDS(obs, here::here(dataPath, "combinedBioObs_envExtracted.rds"))
+saveRDS(obs, "./data/combinedBioObs_envExtracted.rds")

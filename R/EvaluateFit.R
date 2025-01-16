@@ -16,10 +16,9 @@ library(dplyr)
 
 ###########################################################################################################
 # Load biological observation data with environmental covariates extracted
-# (Mine live outside the project)
-parent <- here() %>% dirname()
-dataPath <- here::here(parent, "cefi", "reforecast", "data")
-obs <- readRDS(here::here(dataPath, "combinedBioObs_envExtracted.rds"))
+# parent <- here() %>% dirname()
+# dataPath <- here::here(parent, "cefi", "reforecast", "data")
+obs <- readRDS("./data/combinedBioObs_envExtracted.rds")
 # If observations don't have a "year" column, add one
 # obs$year <- year(obs$date)
 # I'm missing predictor variables for 2024, so trimming that year off
@@ -75,7 +74,7 @@ terminalYrs <- seq(min(allYrs) + 7, max(allYrs) - 1) # Could easily be adjusted
 allAUCs <- data.frame(matrix(nrow = 0, ncol = 7))
 colnames(allAUCs) <- c("terminalYr", "trainAUC", "1YrsOut", "2YrsOut", "3YrsOut", "4YrsOut", "5YrsOut")
 for (j in 1:length(terminalYrs)) {
-  forecastAUCs <- buildGAM(obs = obs, terminalYr = terminalYrs[j])
+  forecastAUCs <- buildGAM(obs = obs, terminalYr = terminalYrs[j], k = 4)
   allAUCs <- dplyr::bind_rows(allAUCs, forecastAUCs)
 }
 
