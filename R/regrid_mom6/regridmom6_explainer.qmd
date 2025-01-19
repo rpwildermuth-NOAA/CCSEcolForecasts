@@ -1,0 +1,212 @@
+---
+title: "How to regrid MOM6 using R and Python"
+format: 
+  html:
+    toc: true
+    embed-resources: true
+    self-contained-math: true
+editor: visual
+author: "Jessica Bolin"
+---
+
+Hi team. Allison Cluett wrote a python script for us: `_regrid.py`, that regrids MOM6 output from its native grid to a normal/rectilinear/WGS84 grid. I'm not good with python yet, so I have adapted this script for use with `{reticulate}`. This should make it easier to regrid MOM6 output for R users with little-to-no python knowledge. See walk-through below.
+
+The hardest part of this script is simply getting python and your virtual environment (i.e., venv) set up. I have created a venv called `environment.yml` that contains the necessary python modules for this script. Once this is configured properly on your local machine, it should be smooth sailing.
+
+Note that I use macOS.
+
+------------------------------------------------------------------------
+
+# Install stuff and configure session
+
+1.  Install Anaconda. This installs `conda` which we use for configuring virtual enviornments: <https://www.star.nesdis.noaa.gov/atmospheric-composition-training/software_anaconda_install.php>
+
+2.  (Not compulsory): Open `data/regrid_example_jb/environment.yml` in RStudio. It will look like the below. This is a virtual environment (i.e., venv) I created with pre-installed modules/libraries and python version we need to regrid MOM6. The only important thing you need to be aware of is the name of the venv: `xesmf_env_2`.
+
+![](images/conda3.png){fig-align="center" width="515"}
+
+3.  Open terminal. Run `conda env create -f /Users/admin/Documents/GitHub/CCSEcolForecasts/data/regrid_example_jb/environment.yml`. This gets the venv above, and uses `conda` to create the environment on your local machine. You can check it worked by running `conda env list`, and it should display the path to the venv. I have 4 venvs, but you should only have 2 if using `conda` for the first time (i.e., `base` and `xesmf_env_2`).
+
+![](images/conda.png){fig-align="center" width="515"}
+
+4.  Open RStudio. Change the default python interpreter from 3.13/whatever is displayed to 3.12 that comes within the Anaconda distribution.
+
+`Tools -> Global Options -> Python -> Select -> Conda Environments -> 3.12`
+
+![](images/conda4.png){fig-align="center" width="515"}
+
+## R dependencies
+
+```{r, message=F, warning = F}
+library(reticulate) # for using python in R
+library(terra) #raster data
+library(maps) # country outline
+
+pth <- "/Users/admin/Documents/GitHub/CCSEcolForecasts/data/regrid_example_jb/"
+
+#packageVersion("reticulate") #‘1.40.0’
+#packageVersion("terra") #‘1.7.78’
+#packageVersion("maps") #‘3.4.2’
+```
+
+## Set up python venv in RStudio
+
+This should reflect the path for `xesmf_env_2` after running `conda env list` in terminal. It might throw a warning about superseding the venv - ignore and move on.
+
+```{r}
+use_python("/opt/anaconda3/envs/xesmf_env_2/bin/python")
+```
+
+## Load in python modules from venv
+
+Like loading R libraries (same same but different).
+
+```{r}
+sys <- import("sys")            # for checking python version/env 
+xarray <- import("xarray")      # for opening netcdfs
+matplotlib <- import("matplotlib")  # for visualization
+plt <- matplotlib$pyplot        # for visualization using matplotlib
+xesmf <- import("xesmf")        # for regridding
+```
+
+## Check venv is working as it should
+
+Make sure the python version is NOT 3.13! The `xesmf` module is not compatible with v3.13. I use v3.12.8.
+
+```{r}
+sys$version # 3.12.8 (make sure it's not 3.13!)
+sys$executable # path to venv 
+```
+
+OK. Looks like python and our venv is configured correctly and we can move on to regridding.
+
+------------------------------------------------------------------------
+
+# Open and visualise stuff
+
+## Static MOM6 grid
+
+Open the MOM6 empty grid. It's better to visualise the grid using Panoply as opposed to RStudio (select the `areacello` variable).
+
+Note that Jessie created `ds_static.nc` using Allison's code in `_staticmom6grid.py` on `ocean_daily.static.nc`. You do not need to run this code; you're good to just read in `ds_static.nc`.
+
+```{r}
+NEP_static_file <- paste0(pth, "ds_static.nc")
+ds_static <- xarray$open_dataset(NEP_static_file)
+ds_static
+```
+
+![](images/panoply.png){fig-align="center" width="515"}
+
+## ROMS (or other) file
+
+This file is important. This netCDF needs to have the extent, CRS and projection we want to regrid our MOM6 to. In this example, I'm using 3km CC ROMS from Mer Pozo-Buil from my abalone work (specifically this is bottom temp for January 1st 1990 from GFDL for all coastal cells to 150m depth off California). As confirmed by reading in the file with `terra::rast()`, you can see the CRS is WGS84, the extent is off California, and has 3 km resolution.
+
+```{r}
+roms_file <- paste0(pth, 'gfdltv_1990_temp.nc')
+roms <- xarray$open_dataset(roms_file) # read in with python
+roms
+```
+
+```{r}
+# Visualise in R, just because...
+rr <- terra::rast(roms_file)[[1]] 
+rr
+plot(rr)
+```
+
+### Assign coordinates to ROMS file
+
+I am creating two coordinates, `lon` and `lat`, with the values of the `longitude` and `latitude` in ROMS. Longitude and latitude must reflect the naming convention of the ROMS netcdf. This creates two new objects for `lon` and `lat` in the `Coordinates` field.
+
+```{r}
+roms <- roms$assign_coords(list(lon = roms$longitude, lat = roms$latitude))
+roms
+```
+
+## MOM6 files
+
+Read in the MOM6 files we want to regrid. Again, use panoply to visualise a file of interest. See how the projection is way off.
+
+```{r}
+# MOM6 file 
+fileys <- list.files(pth)[grep("ocean_monthly", list.files(pth))]  # MOMS files
+fileys <- fileys[!grepl("_RG.nc", fileys)] #exclude any regridded files that already exist in directory
+fileys
+```
+
+![](images/panoply2.png){fig-align="center" width="515"}
+
+# Function to regrid
+
+Here is the function to regrid the files. Below, we'll go through it line by line. Note that the function includes a conditional to skip files if they've already been regridded and exist in the directory.
+
+```{r, eval = F}
+
+regrid_MOM6 <- function(mom6_file) {
+
+  filename <- gsub(pth, "", mom6_file) 
+  filename <- gsub(".nc", "_RG.nc", filename) 
+  
+  if (!file.exists(paste0(pth, filename))) {
+    
+  ds <- xarray$open_dataset(mom6_file)
+  mom_to_roms <- xesmf$Regridder(ds_static, roms, method = 'bilinear', unmapped_to_nan = TRUE)
+  mom6_regrid <- (mom_to_roms(ds))$to_netcdf(path = paste0(pth, filename))
+  } else { 
+    print(paste0("skipping iteration ", fileys[i])) 
+    
+    } # if then
+} # function
+
+```
+
+### Step 1. Set `mom6_file`
+
+Here we're using the first MOM6 file in directory as an example.
+
+```{r}
+mom6_file = paste0(pth, fileys[1])
+mom6_file
+```
+
+### Step 2. Define output filename with `_RG.nc` suffix
+
+```{r}
+ filename <- gsub(pth, "", mom6_file) 
+ filename <- gsub(".nc", "_RG.nc", filename) 
+ filename
+```
+
+### Step 3. Open the file
+
+```{r}
+ds <- xarray$open_dataset(mom6_file)
+ds
+```
+
+### Step 4. Define python function for regridding
+
+Here we are using bilinear interpolation for regridding the MOM6 grid to the 3 km ROMS grid.
+
+```{r}
+mom_to_roms <- xesmf$Regridder(ds_static, # MOM6 empty grid
+                               roms, # ROMS grid
+                               method = 'bilinear', 
+                               unmapped_to_nan = TRUE)
+```
+
+### Step 5. Run python regrid function and save output to directory
+
+```{r}
+mom6_regrid <- (mom_to_roms(ds))$to_netcdf(path = paste0(pth, filename))
+list.files(pth, pattern = "_RG.nc")
+```
+
+### Step 6. Check using `terra`
+
+```{r}
+rr <- rast(paste0(pth, list.files(pth, pattern = "_RG.nc")))
+rr #Has dimensions and extent etc. I want! 
+plot(rr[[1]], main = "MOM6 regridded to 3km ROMS"); map("world", add= T) # *chef's kiss* 
+```

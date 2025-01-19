@@ -30,3 +30,7 @@
 .Ruserdata
 .pdf
 .nc
+
+
+# Specific to Jessie
+data/regrid_example_jb 
