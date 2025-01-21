@@ -32,7 +32,7 @@ require(dplyr)
 # nc.path <- "F:/mom6/"
 # # Remove cnk if testing code, causes issues
 # suppressWarnings(rm(cnk))
-# testmom7sd <- getMOM6(points = points, varName = varName, desired.diameter = desired.diameter, func = func,
+# testmom <- getMOM6(points = points, varName = varName, desired.diameter = desired.diameter, func = func,
 #                     timestep = timestep, nc.path = nc.path)
 
 ###########################################################################################################
@@ -170,10 +170,17 @@ getMOM6 <- function(points, varName, desired.diameter, timestep, func = "mean", 
         lonCount <- (max(boxRange$row) - lonStart) + 1
         latStart <- min(boxRange$col)
         latCount <- (max(boxRange$col) - latStart) + 1
-        envExtractBox <- ncvar_get(dataFile, varName, start = c(lonStart, latStart, t), count = c(lonCount, latCount, 1), verbose = FALSE) 
+        envExtractBox <- ncvar_get(dataFile, varName, start = c(lonStart, latStart, t), count = c(lonCount, latCount, 1), 
+                                   verbose = FALSE, collapse_degen = FALSE) # Last arg stops singleton/degen dimensions being dropped 
+        # Drop extra time dimension
+        envExtractBox <- as.matrix(envExtractBox[, , 1], drop = FALSE, byrow = TRUE)
+        # Special case if envExtractBox has 2 rows and 1 col: as.matrix automatically transposes it, which we don't want
+        if(length(unique(boxRange$row)) == 1 & length(unique(boxRange$col)) == 2) {
+           envExtractBox <- t(envExtractBox)
+        }
         # Subset this rectangular matrix using boxRange indices
-        dimnames(envExtractBox) <- list(row = seq(min(boxRange$row), max(boxRange$row)), 
-                                        col = seq(min(boxRange$col), max(boxRange$col)))
+        dimnames(envExtractBox) <- list(row = seq(min(boxRange$row), max(boxRange$row)),
+                                        col = seq(min(boxRange$col), max(boxRange$col))) 
         envExtractLong <- as.data.frame.table(envExtractBox, stringsAsFactors = FALSE)
         envExtractLong$row <- as.numeric(envExtractLong$row)
         envExtractLong$col <- as.numeric(envExtractLong$col)
