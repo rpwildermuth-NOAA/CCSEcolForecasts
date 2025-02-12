@@ -92,7 +92,7 @@ getMOM6 <- function(points, varName, desired.diameter, timestep, func = "mean", 
   # Now extract environmental variable for all data points
   for(y in 1:nrow(points)) {
     # Skip if outside current MOM6 range (which may change in future!)
-    if(fishyear[y] < 1993 | fishyear[y] > 2017 | is.na(fishlat[y] | is.na(fishlon360[y]))) {
+    if(fishyear[y] < 1993 | fishyear[y] > 2019 | is.na(fishlat[y] | is.na(fishlon360[y]))) {
       next
     }
     
