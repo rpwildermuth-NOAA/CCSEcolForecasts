@@ -1,6 +1,6 @@
 ####################################################################################################################################
 #NLO: This modified version from BM includes env. info from 1993 to 2019 extracted from https://psl.noaa.gov/cefi_portal/
-#The variables are correctly gridded. I used  my example-- the swordfish dataframe using daily info.
+#The variables are correctly gridded. 
 ####################################################################################################################################
 
 
