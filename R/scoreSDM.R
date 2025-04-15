@@ -4,17 +4,17 @@
 # Contact Barbara.Muhling@noaa.gov
 ###########################################################################################################
 
-scoreSDM <- function(subObs, sdmType, varNames, targetName, k, tc, lr) {
+scoreSDM <- function(subObs, sdmType, varNames, targetName, k, tc, lr, yrsToForecast) {
   # Define the training and test forecast years
   yrs <- unique(sort(subObs$year)) # Years in the observational dataset
-  terminalYr <- max(yrs) - 1 # The last year of training data
-  train <- subset(obs, year <= terminalYr)
-  test <- subset(obs, year == (terminalYr + 1)) # Observations the year after the training data ends
+  terminalYr <- max(yrs) - yrsToForecast # The last year of training data 
+  train <- subset(subObs, year <= terminalYr)
+  test <- subset(subObs, year > terminalYr & year <= (terminalYr + yrsToForecast)) # Observations after the training data ends
   
-  # Sometimes a whole year of observations is missing (e.g. 2020), or there are very few observations
+  # Sometimes a whole year/s of observations is missing (e.g. 2020), or there are very few observations
   # In that case, stop and return NA
   if(nrow(test) < 10) { # Could use another cutoff, here it's 10 observations
-    return(NA)
+    return(NA) # Note! This does not currently test if there's whole years without data, do that below
   }
   
   # Otherwise, build an SDM using helper function
@@ -23,8 +23,8 @@ scoreSDM <- function(subObs, sdmType, varNames, targetName, k, tc, lr) {
   # summary(mod1) # If you want to check convergence etc. But GAMs/BRTs nearly always converge unless parameters v inappropriate
   # gbm.step prints model convergence progress as it goes, so you'll see if the number of trees is too small (< ~ 1500)
   
-  # Score the test dataset: the one year of data following the training data (1 year forecast)
-  test$pred <- predict(mod1, test, type = "response")
+  # Score the test dataset: the specified years of data following the training data (X year forecast)
+  test$pred <- predict(mod1, test, type = "response") 
   
   # For now, returning model object (which contains the training data), as well as the test/forecast data
   # For a large training dataset, this could result in a very large object though
