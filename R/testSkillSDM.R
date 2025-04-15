@@ -20,34 +20,37 @@ testSkillSDM <- function(mod, targetName, aucCutoff = 10) {
   # Identify the months and quarters with enough observations to calculate AUC
   # and create a data.frame with all possible combinations to evaluate
   ##### (This is janky and could be improved!) #####
-  months <- aggregate(eval(as.name(targetName)) ~ month, test, FUN = length)
-  quarters <- aggregate(eval(as.name(targetName)) ~ quarter, test, FUN = length)
-  years <- aggregate(eval(as.name(targetName)) ~ year, test, FUN = length)
-  colnames(months)[2] <- colnames(quarters)[2] <- colnames(years)[2] <- "nObs"
+  months <- aggregate(eval(as.name(targetName)) ~ month + year, test, FUN = length)
+  quarters <- aggregate(eval(as.name(targetName)) ~ quarter + year, test, FUN = length)
+  # years <- aggregate(eval(as.name(targetName)) ~ year, test, FUN = length) # Length same as YrsToForecast
+  # colnames(months)[2] <- colnames(quarters)[2] <- colnames(years)[2] <- "nObs"
+  colnames(months)[3] <- colnames(quarters)[3] <- "nObs"
   months <- subset(months, nObs >= aucCutoff)
   quarters <- subset(quarters, nObs >= aucCutoff)
   months$time <- "month"
   quarters$time <- "quarter"
-  years$time <- "year"
+ 
   # Expand dfs to include all options in time and space. Janky...
   months <- months[rep(1:nrow(months), length(space)),]
   months$space <- rep(space, times = (nrow(months) / length(space)))
   quarters <- quarters[rep(1:nrow(quarters), length(space)),] 
   quarters$space <- rep(space, times = (nrow(quarters) / length(space)))
-  years <- years[rep(1:nrow(years), length(space)),] 
-  years$space <- rep(space, times = (nrow(years) / length(space)))
   
   # Join together
-  colnames(months)[1] <- colnames(quarters)[1] <- colnames(years)[1] <- "value"
-  skill <- rbind(months, quarters, years)
+  colnames(months)[1] <- colnames(quarters)[1] <- "value"
+  skill <- rbind(months, quarters)
   skill$auc <- skill$nrows <- NA
 
   # Loop through to get AUC for each combination of spatial/temporal aggregation
+  # Do this separately for multiple years contained within test (i.e. can forecast at different time horizons)
   for (i in 1:nrow(skill)) {
     spc <- skill$space[i]
     tme <- as.character(skill$time[i])
-    # Subset/aggregate test data accordingly
-    toAgg <- subset(test, eval(as.name(skill$time[i])) == skill$value[i]) 
+    yr <- skill$year[i]
+    
+    # Subset/aggregate test data accordingly. Just for one forecast year at a time
+    toAgg <- subset(test, eval(as.name(skill$time[i])) == skill$value[i] & 
+                          year == skill$year[i]) 
     
     # To aggregate in space, first calculate a rounding factor, then round lon/lat for aggregating
     roundFactor <- 1 / spc
