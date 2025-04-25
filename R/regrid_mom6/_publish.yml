@@ -1,0 +1,4 @@
+- source: regridmom6_explainer.qmd
+  quarto-pub:
+    - id: 3ac02c8a-898e-4b2c-936f-ceb1b78cdde4
+      url: 'https://jessicabolin.quarto.pub/how-to-regrid-mom6-using-r-and-python'
