@@ -3271,19 +3271,19 @@ Attributes:
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>roms <span class="ot">&lt;-</span> xarray<span class="sc">$</span><span class="fu">open_dataset</span>(roms_file) <span class="co"># read in with python</span></span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>roms</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>&lt;xarray.Dataset&gt; Size: 119MB
-Dimensions:           (longitude: 286, latitude: 286, time: 365)
+<pre><code>&lt;xarray.Dataset&gt; Size: 332kB
+Dimensions:            (longitude: 286, latitude: 286, time: 1)
 Coordinates:
-  * longitude         (longitude) float64 2kB -126.0 -126.0 ... -116.5 -116.5
-  * latitude          (latitude) float64 2kB 41.99 41.95 41.92 ... 32.55 32.52
-  * time              (time) datetime64[ns] 3kB 1990-01-01 ... 1990-12-31
+  * longitude          (longitude) float64 2kB -126.0 -126.0 ... -116.5 -116.5
+  * latitude           (latitude) float64 2kB 41.99 41.95 41.92 ... 32.55 32.52
+  * time               (time) datetime64[ns] 8B 1990-01-01
 Data variables:
-    gfdltv_1990_temp  (time, latitude, longitude) float32 119MB ...
-    crs               int32 4B ...
+    gfdltv_1990_temp1  (time, latitude, longitude) float32 327kB ...
+    crs                int32 4B ...
 Attributes:
     Conventions:  CF-1.4
     created_by:   R packages ncdf4 and terra (version 1.7-78)
-    date:         2025-01-08 10:26:56</code></pre>
+    date:         2025-01-18 17:49:52</code></pre>
 </div>
 </div>
 <div class="cell">
@@ -3297,7 +3297,8 @@ resolution  : 0.03321678, 0.03323263  (x, y)
 extent      : -126, -116.5, 32.49849, 42.00302  (xmin, xmax, ymin, ymax)
 coord. ref. : lon/lat WGS 84 (EPSG:4326) 
 source      : gfdltv_1990_temp.nc 
-name        : gfdltv_1990_temp_1 
+varname     : gfdltv_1990_temp1 
+name        : gfdltv_1990_temp1 
 time (days) : 1990-01-01 </code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(rr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -3316,21 +3317,21 @@ time (days) : 1990-01-01 </code></pre>
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>roms <span class="ot">&lt;-</span> roms<span class="sc">$</span><span class="fu">assign_coords</span>(<span class="fu">list</span>(<span class="at">lon =</span> roms<span class="sc">$</span>longitude, <span class="at">lat =</span> roms<span class="sc">$</span>latitude))</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>roms</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>&lt;xarray.Dataset&gt; Size: 119MB
-Dimensions:           (longitude: 286, latitude: 286, time: 365)
+<pre><code>&lt;xarray.Dataset&gt; Size: 336kB
+Dimensions:            (longitude: 286, latitude: 286, time: 1)
 Coordinates:
-  * longitude         (longitude) float64 2kB -126.0 -126.0 ... -116.5 -116.5
-  * latitude          (latitude) float64 2kB 41.99 41.95 41.92 ... 32.55 32.52
-  * time              (time) datetime64[ns] 3kB 1990-01-01 ... 1990-12-31
-    lon               (longitude) float64 2kB -126.0 -126.0 ... -116.5 -116.5
-    lat               (latitude) float64 2kB 41.99 41.95 41.92 ... 32.55 32.52
+  * longitude          (longitude) float64 2kB -126.0 -126.0 ... -116.5 -116.5
+  * latitude           (latitude) float64 2kB 41.99 41.95 41.92 ... 32.55 32.52
+  * time               (time) datetime64[ns] 8B 1990-01-01
+    lon                (longitude) float64 2kB -126.0 -126.0 ... -116.5 -116.5
+    lat                (latitude) float64 2kB 41.99 41.95 41.92 ... 32.55 32.52
 Data variables:
-    gfdltv_1990_temp  (time, latitude, longitude) float32 119MB ...
-    crs               int32 4B ...
+    gfdltv_1990_temp1  (time, latitude, longitude) float32 327kB ...
+    crs                int32 4B ...
 Attributes:
     Conventions:  CF-1.4
     created_by:   R packages ncdf4 and terra (version 1.7-78)
-    date:         2025-01-08 10:26:56</code></pre>
+    date:         2025-01-18 17:49:52</code></pre>
 </div>
 </div>
 </section>
