@@ -1,6 +1,6 @@
 ###########################################################################################################
 # Overhauled script for extracting ROMS environmental variable to provided points
-# Basically combines older "getROMS and "XtractROMS" scritps together, and runs for a selected variable
+# Basically combines older "getROMS and "XtractROMS" scripts together, and runs for a selected variable
 # and function (mean, sd), instead of always running everything together
 # Based on previous code from Karin Forney, Heather Welch, Steph Brodie, and others
 # Requires an input data frame with columns labeled "lon" (degrees west), "lat", and "date" (formatted as dates)
@@ -59,11 +59,16 @@ getROMS <- function(points, varName, desired.diameter, func = "mean", histPath, 
     # And specify the correct name for the variable!
     varNameHist <- "BV_frequency"
     varNameNrt <- "bbv_200"
-  } else if (varName == "ild") { # ild is called "ild_05" in NRT netcdf
+    # Catch for latest ROMS NRT file and var being named "ild_05" not "ild"
+  } else if (varName == "ild") { 
     varNameHist <- "ild"
-    varNameNrt <- "ild_05"
+    if(grepl("ild_05", nrtFile)) {
+      varNameNrt <- "ild_05"
+    } else {
+      varNameNrt -> "ild"
+    }
   } else {
-    varNameHist <-varNameNrt <- varName
+    varNameHist <- varNameNrt <- varName
   }
   
   # Print warnings/stop and show error if there's not 1 file each

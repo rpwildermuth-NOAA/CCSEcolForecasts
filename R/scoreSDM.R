@@ -4,7 +4,7 @@
 # Contact Barbara.Muhling@noaa.gov
 ###########################################################################################################
 
-scoreSDM <- function(subObs, sdmType, varNames, targetName, k, tc, lr, yrsToForecast) {
+scoreSDM <- function(subObs, sdmType, varNames, targetName, k, tc, lr, max.trees, yrsToForecast) {
   # Define the training and test forecast years
   yrs <- unique(sort(subObs$year)) # Years in the observational dataset
   terminalYr <- max(yrs) - yrsToForecast # The last year of training data 
@@ -19,7 +19,8 @@ scoreSDM <- function(subObs, sdmType, varNames, targetName, k, tc, lr, yrsToFore
   
   # Otherwise, build an SDM using helper function
   source("./R/buildSDM.R")
-  mod1 <- buildSDM(sdmType = sdmType, train = train, varNames = varNames, targetName = targetName, k = k, tc = tc, lr = lr)
+  mod1 <- buildSDM(sdmType = sdmType, train = train, varNames = varNames, targetName = targetName, 
+                   k = k, tc = tc, lr = lr, max.trees = max.trees)
   # summary(mod1) # If you want to check convergence etc. But GAMs/BRTs nearly always converge unless parameters v inappropriate
   # gbm.step prints model convergence progress as it goes, so you'll see if the number of trees is too small (< ~ 1500)
   

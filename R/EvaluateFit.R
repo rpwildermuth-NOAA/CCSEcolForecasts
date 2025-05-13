@@ -3,6 +3,7 @@
 # Steps are to 1) build an SDM using a specifified number of training years, and
 # 2) evaluate SDM skill on the year/s after the training data ends (i.e. X year forecast)
 # Step 2 includes assessing skill across multiple spatial and temporal resolutions
+# For now is set up to work with a presence/absence (binomial) SDM
 # Contact bmuhling@ucsc.edu
 ###########################################################################################################
 
@@ -22,6 +23,7 @@ library(viridis)
 # Load the helper functions you will need
 source("./R/scoreSDM.R")
 source("./R/testSkillSDM.R")
+source("./R/runDiagnostics.R")
 
 ###########################################################################################################
 # Load biological observation data with environmental covariates extracted
@@ -50,19 +52,20 @@ obs$pa <- obs$anchPA
 # Note that for now the user supplies the SDM-specific parameters. Optimizing parameters for an SDM (esp. a BRT) 
 # when you don't have good information on dataset size, number of variables, prevalence rate etc. is difficult
 # This could be improved in future iterations of this code!
-sdmType <- "gam" # Can currently be "gam" or "brt"
+sdmType <- "brt" # Can currently be "gam" or "brt"
 k <- 4 # Number of knots for a GAM. Will be ignored if not building a GAM
 tc <- 3 # tree complexity for a BRT. Will be ignored if not building a BRT
-lr <- 0.025 # learning rate  for a BRT. Will be ignored if not building a BRT
+lr <- 0.02 # learning rate for a BRT. Will be ignored if not building a BRT
+max.trees <- 10000 # max trees for a BRT. Will be ignored if not building a BRT
 varNames <- c("sst", "ild", "sst_sd", "ssh_sd", "logChl", "logEKE", "distLand", "anchssb") # Names of predictors in the SDM
 targetName <- "pa" # Target variable for the SDM
-aucCutoff <- 10 # If less obervations than this cutoff within a month/season etc., AUC will not be calculated
+aucCutoff <- 10 # If less observations than this cutoff within a month/season etc., AUC will not be calculated
 
 ###########################################################################################################
-# Function to 1) build an SDM and predict to 1 year of withheld data using scoreSDM, and 
+# Function to 1) build an SDM and predict to X years of withheld data using scoreSDM, and 
 # 2) calculate SDM skill at various spatial/temporal aggregation using a specified subset of the 
 # observational dataset for training. "noYrs" is the number of years to use for SDM training
-peelSDM <- function(obs, sdmType, varNames, targetName, k, tc, lr, noYrs, yrsToForecast) {
+peelSDM <- function(obs, sdmType, varNames, targetName, k, tc, lr, max.trees, noYrs, yrsToForecast) {
   # Define subObs: the subset of the complete data to be used for training, plus forecast/testing year/s
   yrs <- unique(sort(obs$year))
   # Define years to include in subObs. At present, training data always start at the earliest year available,
@@ -78,27 +81,30 @@ peelSDM <- function(obs, sdmType, varNames, targetName, k, tc, lr, noYrs, yrsToF
   
   # Call scoreSDM to build an SDM using subObs as training and test data
   mod <- scoreSDM(subObs = subObs, sdmType = sdmType, varNames = varNames,
-                             targetName = targetName, k = k, tc = tc, lr = lr, yrsToForecast = yrsToForecast)
-  # Call testSkillSDM to assess the skill of the 1-year forecast for this SDM
+                       targetName = targetName, k = k, tc = tc, lr = lr, max.trees = max.trees, yrsToForecast = yrsToForecast)
+  # Call testSkillSDM to assess the skill of the X-year forecast for this SDM
   sdmSkill <- testSkillSDM(mod = mod, targetName = targetName, aucCutoff = aucCutoff)
   # Add noYrs and sdmType to output
   sdmSkill$noYrsTrain <- noYrs
   sdmSkill$terminalYr <- max(subObs$year) - yrsToForecast 
   sdmSkill$sdmType <- sdmType
   
-  # Return results: at present, returning mod and sdmSkill as a list
-  out <- list("sdm" = mod$sdm, "test" = mod$test, "sdmSkill" = sdmSkill)
+  # Return some simple diagnostics
+  evalOutputs <- runDiagnostics(mod = mod, max.trees = max.trees)
+  
+  # Return results: at present, returning as a list
+  out <- list("sdm" = mod$sdm, "test" = mod$test, "modelEval" = evalOutputs, "sdmSkill" = sdmSkill)
   return(out)
 }
 
 ###########################################################################################################
-# An example: 3-year forecast skill for anchovy SDM where training data include between 10 and 20 years of data 
+# An example: 5-year forecast skill for anchovy SDM where training data include between 10 and 15 years of data 
 yrsToTrain <- seq(10, 15) 
-yrsToForecast <- 8
+yrsToForecast <- 5
 output <- vector(mode = "list", length = length(yrsToTrain)) # We will save results to a list (a list of lists)
 for (j in 1:length(output)) {
   output[[j]] <- peelSDM(obs = obs, sdmType = sdmType, varNames = varNames, targetName = targetName,
-                         k = k, tc = tc, lr = lr, noYrs = yrsToTrain[j], yrsToForecast = yrsToForecast)
+                         k = k, tc = tc, lr = lr, max.trees = max.trees, noYrs = yrsToTrain[j], yrsToForecast = yrsToForecast)
 }
 
 ###########################################################################################################

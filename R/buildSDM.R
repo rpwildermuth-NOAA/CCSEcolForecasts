@@ -4,7 +4,7 @@
 # Contact Barbara.Muhling@noaa.gov
 ###########################################################################################################
 
-buildSDM <- function(sdmType, train, varNames, targetName, k, tc, lr) {
+buildSDM <- function(sdmType, train, varNames, targetName, k, tc, lr, max.trees) {
   if(sdmType == "gam") {
       # Build formula
       fm <- paste('s(', varNames, ', k = k', ')', sep = "", collapse = ' + ')
@@ -17,7 +17,7 @@ buildSDM <- function(sdmType, train, varNames, targetName, k, tc, lr) {
     train <- data.frame(train) # gbm.step does not like tibbles
     set.seed(1)
     mod1 <- gbm.step(data = train, gbm.x = varNames, gbm.y = targetName, 
-                     tree.complexity = tc, learning.rate = lr, bag.fraction = 0.6, family = "bernoulli")
+                     tree.complexity = tc, learning.rate = lr, bag.fraction = 0.6, family = "bernoulli", max.trees = max.trees)
     # A simple catch for a BRT with slightly too few trees
     # This is not a substitute for providing sensible start values for tc/lr!
     # If length of training data being tested varies a lot, we will somehow need to optimize lr/tc

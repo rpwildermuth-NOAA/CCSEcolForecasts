@@ -25,6 +25,7 @@ obs <- readRDS("./data/combinedBioObs.rds")
 # e.g. desired.diameter = 0.7 returns values within a 0.7x0.7 degree box
 # Here I will extract variables for an anchovy SDM:
 # ROMs: ild, sst, logEKE (really TKE), sst_sd (0.7 degrees), ssh_sd (0.7 degrees)
+# MOM6 (gridded): sst, surface chl 
 # CMEMS: surface chl
 # SSB (Hinchliffe et al.)
 # Distance from nearest land (relative to a coastline shapefile)
@@ -51,6 +52,12 @@ obs$sst_sd <- sstSD$sst_sd_0.7
 obs$ssh_sd <- sshSD$ssh_sd_0.7
 obs$eke <- ((suMean$su_mean_0.1 ^ 2) + (svMean$sv_mean_0.1 ^ 2)) / 2
 obs$logEKE <- log(obs$eke)
+
+###########################################################################################################
+# MOM6 variables
+source("./R/getMOM6.R")
+### Note daily surface chl not currently available from CEFI portal for regular grid ###
+### Will update here when it is available ###
 
 ###########################################################################################################
 # CMEMS level 4 surface chlorophyll
