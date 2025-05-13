@@ -3,6 +3,7 @@
 # Steps are to 1) build an SDM using a specifified number of training years, and
 # 2) evaluate SDM skill on the year/s after the training data ends (i.e. X year forecast)
 # Step 2 includes assessing skill across multiple spatial and temporal resolutions
+# For now is set up to work with a presence/absence (binomial) SDM
 # Contact bmuhling@ucsc.edu
 ###########################################################################################################
 
