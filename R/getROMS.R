@@ -16,11 +16,11 @@ require(lubridate)
 # # Testing function
 # points <- data.frame(expand.grid("lon" = seq(-132, -122, by = 2), "lat" = seq(32, 40, by = 2),
 #                                  "date" = seq(as.Date("2009-06-15"), as.Date("2017-06-15"), by = "month")))
-# varName <- "su"
+# varName <- "ild"
 # desired.diameter <- 0.1 # Note! This means a 7x7 or 49 pixel box
 # func <- "mean" # mean or sd
-# histPath <- "F:/roms/hist" # As some folks might have them mixed together, I use subfolders...
-# nrtPath <- "F:/roms/nrtComplete"
+# histPath <- "E:/roms/hist" # As some folks might have them mixed together, I use subfolders...
+# nrtPath <- "E:/roms/nrtComplete"
 # testroms <- getROMS(points = points, varName = varName, desired.diameter = desired.diameter, func = func,
 #                 histPath = histPath, nrtPath = nrtPath)
 
