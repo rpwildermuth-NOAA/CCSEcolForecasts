@@ -135,7 +135,7 @@ ggplot(sdmSkillAllAgg) + geom_bar(aes(x = factor(space), y = auc, group = termin
 ggplot(sdmSkillAllAgg) + 
   geom_boxplot(aes(x = forecastHorizon, y = auc, group = factor(forecastHorizon), fill = forecastHorizon)) +
   scale_fill_viridis("Forecast \nHorizon", option = "mako") + xlab("Forecast Horizon (Years)") + ylab("Forecast AUC") + 
-  scale_y_continuous(limits = c(0, 1), oob = rescale_none) + theme_bw() + facet_grid(time ~ space)
+  scale_y_continuous(limits = c(0, 1), oob = rescale_none) + theme_bw() + facet_grid(time ~ space, scales = "free")
 
 # Save output. Build a more informative filename depending on your work!
 saveRDS(output, file = paste0("./outputs/", sdmType, "_anchovy_", targetName, "forecast", yrsToForecast, "years.rds")) 
