@@ -4,12 +4,19 @@
 # Contact Barbara.Muhling@noaa.gov
 ###########################################################################################################
 
-testSkillSDM <- function(mod, targetName, aucCutoff = 10) {
+testSkillSDM <- function(mod, targetName, aucCutoff = 10, usePersistence) {
   # Define the test data from the list that includes the model object and test data
   test <- mod$test
   
+  # Define the predictions: either regular/matching sampling times/places, or persistence (environment from the year before)
+  if(usePersistence == TRUE) {
+    test$predAssess <- test$predPersist
+  } else {
+    test$predAssess <- test$pred
+  }
+  
   # Drop observations with pred = NA (from environmental data missing, e.g. outside ROMS domain)
-  test <- subset(test, !is.na(pred))
+  test <- subset(test, !is.na(predAssess))
   
   # Build a dataframe to take all the skill metrics: at present we're aggregating by 
   # Space: 0.1 degrees (~ 10km, native ROMS), 0.25 degrees (~ 25km), 1 degree (~ 100 km)
@@ -61,18 +68,18 @@ testSkillSDM <- function(mod, targetName, aucCutoff = 10) {
     # (that is: if any stations within spatiotemporal window have presence, then presence = 1)
     testAgg <- aggregate(eval(as.name(targetName)) ~ lonrd + latrd + eval(as.name(tme)), 
                          data = toAgg, FUN = max, na.rm = TRUE) 
-    testAggPred <- aggregate(pred ~ lonrd + latrd + eval(as.name(tme)), data = toAgg, FUN = mean, na.rm = TRUE)
+    testAggPred <- aggregate(predAssess ~ lonrd + latrd + eval(as.name(tme)), data = toAgg, FUN = mean, na.rm = TRUE)
     # Fix colnames and join
     colnames(testAgg)[3:4] <- c(tme, targetName)
     colnames(testAggPred)[3] <- tme
-    testAgg <- left_join(testAgg, testAggPred[c("lonrd", "latrd", "pred")], by = c("lonrd", "latrd"))
+    testAgg <- left_join(testAgg, testAggPred[c("lonrd", "latrd", "predAssess")], by = c("lonrd", "latrd"))
     
     # Calculate AUC if sufficient rows, and both presences/absence are available
-    nOutcomes <- aggregate(pred ~ eval(as.name(targetName)), testAgg, FUN = length)
+    nOutcomes <- aggregate(predAssess ~ eval(as.name(targetName)), testAgg, FUN = length)
     if(nrow(testAgg) < aucCutoff | nrow(nOutcomes) != 2) {
       next
     } else {
-      skill$auc[i] <- auc(testAgg[, 4], testAgg$pred, direction = "<", quiet = TRUE)[1]
+      skill$auc[i] <- auc(testAgg[, 4], testAgg$predAssess, direction = "<", quiet = TRUE)[1]
     }
      skill$nrows[i] <- nrow(testAgg) 
   }

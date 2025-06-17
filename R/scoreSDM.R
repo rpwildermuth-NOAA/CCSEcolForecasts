@@ -4,7 +4,7 @@
 # Contact Barbara.Muhling@noaa.gov
 ###########################################################################################################
 
-scoreSDM <- function(subObs, sdmType, varNames, targetName, k, tc, lr, max.trees, yrsToForecast) {
+scoreSDM <- function(subObs, sdmType, varNames, targetName, k, tc, lr, max.trees, yrsToForecast, includePersistence) {
   # Define the training and test forecast years
   yrs <- unique(sort(subObs$year)) # Years in the observational dataset
   terminalYr <- max(yrs) - yrsToForecast # The last year of training data 
@@ -26,6 +26,14 @@ scoreSDM <- function(subObs, sdmType, varNames, targetName, k, tc, lr, max.trees
   
   # Score the test dataset: the specified years of data following the training data (X year forecast)
   test$pred <- predict(mod1, test, type = "response") 
+  
+  # If includePersistence is TRUE, calculate the model skill using environmental predictors from the year before
+  if(includePersistence == TRUE) {
+    newEnvVars <- test[c(grepl("_lag1", colnames(test)))] 
+    colnames(newEnvVars) <- gsub("_lag1", "", colnames(newEnvVars))
+    newEnvVars$pa <- test$pa
+    test$predPersist <- predict(mod1, newEnvVars, type = "response")
+  }
   
   # For now, returning model object (which contains the training data), as well as the test/forecast data
   # For a large training dataset, this could result in a very large object though
