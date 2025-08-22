@@ -8,14 +8,14 @@ library(stars)
 library(cubelyr)
 
 # modified from code in ProcessData.Rmd in recrmntDFA
-datPath <- "C:/Users/r.wildermuth/Documents/CEFI/SDMClimateForecasts/SDMoutput/"
+datPath <- "C:/Users/r.wildermuth/Documents/CEFI/SDMClimateForecasts/"
 
 # sardine spawning season
 cpsFiles <- expand.grid(1:12, 1998:2023, "SDMs.nc") %>%
   mutate(sdmFile = paste(Var1, Var2, Var3, sep = "_")) %>%
   pull(sdmFile)
 
-cpsFiles <- paste0(datPath, "HistoricalCPSGAMsBRTsERDDAPROMSDomain/", cpsFiles)
+cpsFiles <- paste0(datPath, "SDMoutput/HistoricalCPSGAMsBRTsERDDAPROMSDomain/", cpsFiles)
 cpsSDMs <- read_stars(cpsFiles, proxy = FALSE, quiet = TRUE)
 # Time fix from Barb
 wrongTimes <- as.Date(st_get_dimension_values(cpsSDMs, "time"))
@@ -137,3 +137,73 @@ test2 <- data.frame(time = st_get_dimension_values(test1, "time"),
 test2 %>% 
   ggplot() +
   geom_line(aes(x = time, y = coocrSarChb))
+
+# look at co-occurrence observations from survey --------------------------
+
+trawlDat <- read_csv(file = paste0(datPath, "CPS_Trawl_LifeHistory_Haulcatch_dl20250804.csv"))
+
+# find hauls with sardine and PacMac together
+sardHauls <- trawlDat %>% filter(scientific_name == "Sardinops sagax")
+pacmacHauls <- trawlDat %>% filter(scientific_name == "Scomber japonicus")
+coocrObs <- inner_join(x = sardHauls, y = pacmacHauls, 
+                       by = c("cruise", "ship", "haul", "collection", 
+                              "start_latitude", "start_longitude", "stop_latitude",
+                              "stop_longitude", "equilibrium_time", "haulback_time"))
+coocrObs <- coocrObs %>% select("cruise", "ship", "haul", "collection", 
+                                "start_latitude", "start_longitude", "stop_latitude",
+                                "stop_longitude", "equilibrium_time", "haulback_time") %>%
+              left_join(y = trawlDat, by = c("cruise", "ship", "haul", "collection", 
+                                             "start_latitude", "start_longitude", 
+                                             "stop_latitude", "stop_longitude", 
+                                             "equilibrium_time", "haulback_time"))
+
+# see if %sard by weight can be calculated
+# max incidental take of sardine in other directed CPS fisheries is 20% of landed weight when sardine are overfished
+# see sec4.5.1 Rebuilding Plan for Pacific Sardine, https://www.pcouncil.org/documents/2023/06/coastal-pelagic-species-fishery-management-plan.pdf/
+# assume "landed weight" is weight of CPS finfish in each haul - avoids dealing with presence_only = Y
+coocrObs <- coocrObs %>% mutate(remaining_weight = case_when(is.na(remaining_weight) ~ 0,
+                                                             TRUE ~ remaining_weight), 
+                                totWeight = subsample_weight + remaining_weight)
+landedPct <- coocrObs %>% filter(scientific_name %in% c("Sardinops sagax", 
+                                                        "Scomber japonicus", 
+                                                        "Trachurus symmetricus", 
+                                                        "Engraulis mordax")) %>%
+                group_by(cruise, haul, collection) %>%
+                summarize(landedWeight = sum(totWeight))
+landedPct <- landedPct %>% filter(!is.na(landedWeight)) %>% # remove when subsample weight not available
+                left_join(coocrObs %>% filter(scientific_name %in% c("Sardinops sagax", 
+                                                                     "Scomber japonicus", 
+                                                                     "Trachurus symmetricus", 
+                                                                     "Engraulis mordax")),
+                          by = c("cruise", "haul", "collection")) %>%
+                mutate(pctLandWt = totWeight/landedWeight*100) 
+landedPct %>%
+  select(haul, collection, scientific_name, totWeight, landedWeight, pctLandWt)
+
+# number of co-occurring hauls
+coocrObs %>% filter(scientific_name == "Sardinops sagax") %>% nrow()
+# number of co-occuring hauls with sardine weight above limit
+landedPct %>% filter(scientific_name == "Sardinops sagax",
+                     pctLandWt >= 20) %>% nrow()
+
+# look at spread of co-occurrences in space and time
+coocrObs %>% ggplot(aes(x = stop_longitude, y = stop_latitude)) + 
+  geom_point()
+coocrObs %>% mutate(Mo = month(equilibrium_time),
+                    Yr = year(equilibrium_time)) %>%
+  distinct(cruise, haul, collection, stop_latitude, stop_longitude, Mo, Yr) %>%
+  summary()
+coocrObs %>% mutate(Mo = month(equilibrium_time),
+                    Yr = year(equilibrium_time)) %>%
+  distinct(cruise, haul, collection, stop_latitude, stop_longitude, Mo, Yr) %>%
+  select(Mo, Yr) %>% table()
+
+landedPct %>% filter(scientific_name == "Sardinops sagax",
+                     pctLandWt >= 20) %>% 
+  ggplot(aes(x = stop_longitude, y = stop_latitude)) + 
+  geom_point()
+landedPct %>% filter(scientific_name == "Sardinops sagax",
+                     pctLandWt >= 20) %>%
+  mutate(Mo = month(equilibrium_time),
+         Yr = year(equilibrium_time)) %>%
+  summary()
