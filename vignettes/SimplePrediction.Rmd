@@ -1,0 +1,74 @@
+---
+title: "Simple SDM prediction"
+author: "Robert Wildermuth"
+date: "2025-9-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, loadLibraries}
+library(mgcv)
+library(tidyr)
+library(lubridate)
+library(pROC)
+library(ggplot2)
+library(scales)
+library(dplyr)
+library(gbm)
+library(dismo)
+library(viridis)
+library(sqldf)
+source("./R/scoreSDM.R")
+source("./R/testSkillSDM.R")
+```
+
+# Perform simple predictions from a pre-fit SDM model
+
+Load the previously fit SDM model
+```{r, loadSDM}
+
+
+```
+
+## Predict to previously observed locations
+```{r}
+# Predict at 1-year forecast horizon
+horizon <- 1
+
+inSamplePred <- scoreSDM()
+
+# plot the predictions and observations
+```
+
+What about a different forecast horizon?
+```{r, horiz3}
+# Predict at 3-year forecast horizon
+horizon <- 3
+
+inSamplePred <- scoreSDM()
+
+# plot the predictions and observations
+```
+
+## Predict to the full spatial surface
+```{r}
+# construct a mesh of evenly-spaced points within the sample frame
+#!!RW: I think this is what Nerea did in 3_Predict_native.R
+```
+
+## Compare the skill for each prediction
+```{r, testSkill}
+# also compare to a persistence assumption
+
+# Call testSkillSDM to assess the skill of the X-year forecast for this SDM
+sdmSkill <- testSkillSDM(mod = mod, targetName = targetName, aucCutoff = aucCutoff, usePersistence = FALSE)
+# Add noYrs and sdmType to output
+sdmSkill$noYrsTrain <- noYrs
+sdmSkill$terminalYr <- max(subObs$year) - yrsToForecast 
+sdmSkill$sdmType <- sdmType
+  
+# spatial plot of difference in prediction skill and observations
+```

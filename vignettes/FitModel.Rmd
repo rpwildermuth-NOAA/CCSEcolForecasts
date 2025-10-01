@@ -1,0 +1,96 @@
+---
+title: "Simple model fitting"
+author: "Robert Wildermuth"
+date: "2025-9-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, loadLibraries}
+library(mgcv)
+library(tidyr)
+library(lubridate)
+library(pROC)
+library(ggplot2)
+library(scales)
+library(dplyr)
+library(gbm)
+library(dismo)
+library(viridis)
+source("./R/buildSDM.R")
+```
+
+# Fit an SDM model and calculate basic diagnostics
+
+Load the training dataset and fit the 
+```{r, fitSDM}
+# Load biological observation data with environmental covariates extracted
+# This is now updated to include variables extracted at a lag of 1 year, which are used to calculate
+# persistence skill (variables labeled with "_lag1")
+# Is assumed that the columns "lon", "lat", and "date" are present and complete
+obs <- readRDS("./data/combinedBioObs_envExtracted.rds")
+# If observations don't have a "year", "month" and "quarter" columns, add them. Will need a "date" column to get them
+if(!"year" %in% colnames(obs)) {
+  obs$year <- year(obs$date)  
+}
+if(!"month" %in% colnames(obs)) {
+  obs$month <- month(obs$date)  
+}
+if(!"quarter" %in% colnames(obs)) {
+  obs$quarter <- quarter(obs$date)  
+}
+
+# I'm missing predictor variables for 2024, so I'm trimming that year off
+obs <- subset(obs, year <= 2023)
+# Define the target variable: here presence/absence of anchovy
+obs$pa <- obs$anchPA
+
+# Define the training and test forecast years
+yrs <- unique(sort(subObs$year)) # Years in the observational dataset
+terminalYr <- max(yrs) - yrsToForecast # The last year of training data 
+train <- subset(subObs, year <= terminalYr)
+test <- subset(subObs, year > terminalYr & year <= (terminalYr + yrsToForecast)) # Observations after the training data ends
+
+mod1 <- buildSDM(sdmType = sdmType, train = train, varNames = varNames, targetName = targetName, 
+                   k = k, tc = tc, lr = lr, max.trees = max.trees)
+summary(mod1) # If you want to check convergence etc. But GAMs/BRTs nearly always converge unless parameters v inappropriate
+  # gbm.step prints model convergence progress as it goes, so you'll see if the number of trees is too small (< ~ 1500)
+  
+# For GAMS
+concurvity(mod1)
+gam.check(mod1)
+
+#Percent deviance explained: SINGLE model
+#((null deviance - residual deviance)/null deviance)*100
+dev_eval=function(model_object){
+  null <- model_object$self.statistics$mean.null
+  res <- model_object$self.statistics$mean.resid
+  dev=((null - res)/null)*100 
+  return(dev)
+}
+dev_eval(mod1)# deviance explained by the model
+```
+
+## Evaluate diagnostics of model's fit to data
+
+Calculate some basic diagnostics 
+```{r, diags}
+# Return some simple diagnostics
+evalOutputs <- runDiagnostics(mod = mod1, max.trees = max.trees)
+  
+```
+
+Visualize the results
+```{r}
+# For GAMs
+plot(mod1, pages = 1)
+
+# For BRTs
+gbm.plot(res1.tc3.lr01, smooth=TRUE, plot.layout = c(4,4), write.title=T) #response curves/ fitted functions
+
+ggInfluence(res1.tc3.lr01)
+
+```

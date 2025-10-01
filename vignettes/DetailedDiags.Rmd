@@ -1,0 +1,79 @@
+---
+title: "Detailed diagnostics"
+author: "Robert Wildermuth"
+date: "2025-9-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, loadLibraries}
+library(mgcv)
+library(tidyr)
+library(lubridate)
+library(pROC)
+library(ggplot2)
+library(scales)
+library(dplyr)
+library(gbm)
+library(dismo)
+library(viridis)
+library(sqldf)
+source("./R/buildSDM.R")
+```
+
+# Calculate some detailed SDM fit diagnostics
+
+Load the data and split into test and training sets
+```{r, loadData}
+# Load biological observation data with environmental covariates extracted
+# This is now updated to include variables extracted at a lag of 1 year, which are used to calculate
+# persistence skill (variables labeled with "_lag1")
+# Is assumed that the columns "lon", "lat", and "date" are present and complete
+obs <- readRDS("./data/combinedBioObs_envExtracted.rds")
+# If observations don't have a "year", "month" and "quarter" columns, add them. Will need a "date" column to get them
+if(!"year" %in% colnames(obs)) {
+  obs$year <- year(obs$date)  
+}
+if(!"month" %in% colnames(obs)) {
+  obs$month <- month(obs$date)  
+}
+if(!"quarter" %in% colnames(obs)) {
+  obs$quarter <- quarter(obs$date)  
+}
+
+# I'm missing predictor variables for 2024, so I'm trimming that year off
+obs <- subset(obs, year <= 2023)
+# Define the target variable: here presence/absence of anchovy
+obs$pa <- obs$anchPA
+
+# Define the training and test forecast years
+yrs <- unique(sort(subObs$year)) # Years in the observational dataset
+terminalYr <- max(yrs) - yrsToForecast # The last year of training data 
+train <- subset(subObs, year <= terminalYr)
+test <- subset(subObs, year > terminalYr & year <= (terminalYr + yrsToForecast)) # Observations after the training data ends
+
+# Assume your dataset is named 'data' and the response variable is 'presence'
+# Create an 75-25 train-test split
+trainIndex <- createDataPartition(DataInput_Fit$PresAbs, p = 0.75, list = FALSE)
+# Subset data
+train <- DataInput_Fit[trainIndex, ]
+test <- DataInput_Fit[-trainIndex, ]
+```
+
+Do different levels of cross-validation
+#!!RW: need to define these functions, or save and source them from 2_Fit_model.R
+```{r, xv}
+# Leave-one-out cross-validation
+SDR.loo.eval <-LOO_eval(DataInput_Fit,gbm.x=gbm.x, gbm.y="PresAbs",lr=0.01, tc=3)
+
+# test with 25% of the full dataset
+SDR.7525.eval <- eval_7525(DataInput_Fit,gbm.x=gbm.x, gbm.y="PresAbs",lr=0.01, tc=3)
+
+# comare to full model fit 
+#!!RW: Is this just the same as buildSDM()?
+SDR.100.eval <- eval_100_percent(DataInput_Fit,gbm.x=gbm.x, gbm.y="PresAbs",lr=0.01, tc=3)
+
+```

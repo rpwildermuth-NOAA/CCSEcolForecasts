@@ -1,0 +1,130 @@
+---
+title: "Example data preparation workflow"
+author: "Robert Wildermuth"
+date: "2025-9-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, loadLibraries}
+library(rerddap)
+library(tidyr)
+library(lubridate)
+library(here)
+library(sf)
+library(lubridate)
+library(dplyr)
+library(tidyr)
+library(corrplot)
+
+# Load helper functions to extract environmental predictors
+# These rely on environmental netcdfs, which are stored in different places!
+source("../R/getROMS.R") # ROMS ocean model variables
+# source("./R/getMOM6_gridded.R") # MOM6 ocean model variables
+source("../R/getCMEMS_l4chl.R") # CMEMS daily L4 chl
+source("../R/getDistLand.R") # Distance to nearst land based on coast shp
+source("../R/getBathym.R") # ETOPO bathymetry
+```
+
+# Prepare an example dataset for specied distribution modeling
+
+Here we prepare a sample dataset to create a species distribution model for northern anchovy using the publicly available NOAA SWFSC California Current Ecosystem Survey (CCES) acoustic-trawl sampling observations.
+
+First, we start by downloading and cleaning up the CCES data
+```{r, CPStrawl}
+# Download the latest SWFSC CPS trawl observations from ERDDAP
+dataInfo <- info('FRDCPSTrawlLHHaulCatch', url = 'https://coastwatch.pfeg.noaa.gov/erddap/')
+# Show the dataset columns (also see https://coastwatch.pfeg.noaa.gov/erddap/tabledap/FRDCPSTrawlLHHaulCatch.html)
+cols <- info('FRDCPSTrawlLHHaulCatch')$variables
+# Download the data
+cps <- tabledap(dataInfo, fields = cols$variable_name)
+
+# Process fields 
+# NA values for subsamples mean zeroes
+cps$subsample_count <- ifelse(is.na(cps$subsample_count), 0, cps$subsample_count)
+cps$subsample_weight <- ifelse(is.na(cps$subsample_weight), 0, cps$subsample_weight)
+# Use numbers and weights to show presence/absence
+cps$pres <- ifelse(cps$subsample_count > 0 | cps$subsample_weight > 0, 1, 0)
+# Get mean longitude and latitude
+cps$lon <- rowMeans(cps[c("longitude", "stop_longitude")])
+cps$lat <- rowMeans(cps[c("latitude", "stop_latitude")])
+# plot(cps$lon, cps$lat) # Quick for any outlier locations
+# Add a date column
+cps$date <- as.Date(cps$time)
+# Remove a few daytime samples
+cps$hr <- hour(cps$time - hours(7)) # times originally in UTC
+cps$dn <- ifelse(cps$hr < 6.1 | cps$hr > 17.9, "night", "day")
+cps <- subset(cps, dn == "night")
+# Convert to wide format
+cpsMatrix <- pivot_wider(cps, names_from = scientific_name, values_from = pres, 
+                         id_cols = c(cruise, haul, lon, lat, date, dn), values_fill = list(values = 0))
+# Convert NA to 0 
+cpsMatrix[is.na(cpsMatrix)] <- 0
+
+# Add a few other useful columns
+cpsMatrix$survey <- "cps"
+
+# Subset to just anchovy
+cpsAnch <- cpsMatrix[c("survey", "cruise", "haul", "lon", "lat", "date", "Engraulis mordax")]
+colnames(cpsAnch)[ncol(cpsAnch)] <- "anchPA"
+
+# Add a unique ID
+cpsAnch$id <- seq(1:nrow(cpsAnch)) # used as 'obs' bellow
+```
+
+Next, we pull together physical covariate data from other public online databases.
+```{r, getCovars}
+# Load datasets: these currently live in project ./data
+# coast <- sf::read_sf("./data/EPOCoast60_noGI.shp") # The coast shp
+coast <- tigris::coastline() #!!RW: have to check if this will work for demonstration purposes
+anch <- read.csv("./data/Hinchliffe_CSNA_timeseries_19652023.csv") # Anchovy SSB from Hincliffe et al. 2025
+
+# To get a "persistence" forecast, we extract environmental variables from the year before the sampling date
+# lag = 0 in the function extracts variables at the sampling date, lag = 1 extracts from the year before
+# This is clunky but here I'm running the function twice to get lag = 0 and lag = 1, then joining the outputs
+# Careful with lag > 0, could potentially give dates outside the temporal range of environmental datasets
+#!!RW: generalize extractEnvVars() to specifiy which covariates to pull in
+#      - OR just call the specific get*() fxns to make things more explicit
+envExtractLag0 <- extractEnvVars(obs = obs, lag = 0)
+envExtractLag1 <- extractEnvVars(obs = obs, lag = 1)
+# Adjust colnames: clunky
+#!!RW: Clean this up
+colnames(envExtractLag1) <- paste0(colnames(envExtractLag1), "_lag1") # Adjust with lag number
+# Figure out col index where environmental covariates start
+startCol <- ncol(obs) + 1
+envExtract <- cbind(envExtractLag0, envExtractLag1[, startCol: ncol(envExtractLag1)])
+# Save the output
+saveRDS(envExtract, "./data/combinedBioObs_envExtracted.rds")
+# for now load from local file
+envExtract <- readRDS("../data/combinedBioObs_envExtracted.rds")
+```
+
+We can investigate how these variables relate to the anchovy observations in the CCES dataset.
+```{r}
+# plot example time series
+envExtract %>% ggplot(aes(x = year, y = sst)) +
+  geom_point() +
+  facet_wrap(~anchPA)
+
+# plot correlations
+corrMat <- cor(envExtract %>% select(lon, lat, anchPA, ild, sst, eke, chl, bathym, anchssb), use = "pairwise.complete.obs")
+pTest <- cor.mtest(envExtract %>% select(lon, lat, anchPA, ild, sst, eke, chl, bathym, anchssb), alternative = "two.sided", method = "pearson")
+corrplot(corrMat, p.mat = pTest$p, sig.level = 0.05, insig = "blank",
+         order = 'hclust', hclust.method = "ward.D2", #"centroid", #"single", #
+         tl.col = 'black', type = "lower",
+         cl.ratio = 0.1, tl.srt = 45, tl.cex = 0.6, #mar = c(0.1, 0.1, 0.1, 0.1), 
+         addrect = 6, rect.col = "green", diag = FALSE)
+
+# Biplots of covariate space
+envExtract %>% filter(anchPA == 1) %>%
+  ggplot(aes(x = ild, y = sst)) +
+  geom_point()
+```
+
+We will create a set of training and test subsets of the observational data for later use.
+```{r}
+
+```

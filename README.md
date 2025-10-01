@@ -27,13 +27,16 @@ skill of forecast models that integrate ecological processes for use in
 operational ecosystem-based fisheries management. The code in this
 repository supports the production of species distribution models (SDMs)
 with the intent of creating forecast products for three spatial case
-study applications: - An index of anchovy availability to support
-evaluations of California sea lion breeding success in the Southern
-California Bight (see [Fennie et
-al. 2023](https://doi.org/10.1098/rspb.2022.2326) for details) - A
-habitat model of swordfish distribution based on West Coast drift
-gillnet fishery catches - An index of risk of Pacific sardine bycatch in
-the Pacific mackerel fishery
+study applications:
+
+- An index of anchovy availability to support evaluations of California
+  sea lion breeding success in the Southern California Bight (see
+  [Fennie et al. 2023](https://doi.org/10.1098/rspb.2022.2326) for
+  details)
+- A habitat model of swordfish distribution based on West Coast drift
+  gillnet fishery catches
+- An index of risk of Pacific sardine bycatch in the Pacific mackerel
+  fishery
 
 Our **AIMS** are to: - Assess the forecast skill of SDMs using NOAA’s
 Physical Sciences Laboratory MOM6 and other oceanographic products -

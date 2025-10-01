@@ -1,0 +1,150 @@
+---
+title: "Test forecast skill"
+author: "Robert Wildermuth"
+date: "2025-9-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, loadLibraries}
+library(mgcv)
+library(here)
+library(tidyr)
+library(lubridate)
+library(pROC)
+library(ggplot2)
+library(scales)
+library(dplyr)
+library(gbm)
+library(dismo)
+library(viridis)
+
+###########################################################################################################
+# Load the helper functions you will need
+source("./R/scoreSDM.R")
+source("./R/testSkillSDM.R")
+```
+
+# Perform Leave-Future-Out cross-validation to test forecast skill of an SDM
+
+Load the the full dataset
+```{r, loadData}
+# Load biological observation data with environmental covariates extracted
+# This is now updated to include variables extracted at a lag of 1 year, which are used to calculate
+# persistence skill (variables labeled with "_lag1")
+# Is assumed that the columns "lon", "lat", and "date" are present and complete
+obs <- readRDS("./data/combinedBioObs_envExtracted.rds")
+# If observations don't have a "year", "month" and "quarter" columns, add them. Will need a "date" column to get them
+if(!"year" %in% colnames(obs)) {
+  obs$year <- year(obs$date)  
+}
+if(!"month" %in% colnames(obs)) {
+  obs$month <- month(obs$date)  
+}
+if(!"quarter" %in% colnames(obs)) {
+  obs$quarter <- quarter(obs$date)  
+}
+
+# I'm missing predictor variables for 2024, so I'm trimming that year off
+obs <- subset(obs, year <= 2023)
+# Define the target variable: here presence/absence of anchovy
+obs$pa <- obs$anchPA
+
+```
+
+Test 5-year forecast skill
+#!!RW: Need to define/load peelSDM() fxn from EvaluateFit.R
+```{r}
+###########################################################################################################
+# Define some parameters for building the SDM/s
+# Note that for now the user supplies the SDM-specific parameters. Optimizing parameters for an SDM (esp. a BRT) 
+# when you don't have good information on dataset size, number of variables, prevalence rate etc. is difficult
+# This could be improved in future iterations of this code!
+sdmType <- "brt" # Can currently be "gam" or "brt"
+k <- 4 # Number of knots for a GAM. Will be ignored if not building a GAM
+tc <- 3 # tree complexity for a BRT. Will be ignored if not building a BRT
+lr <- 0.02 # learning rate for a BRT. Will be ignored if not building a BRT
+max.trees <- 10000 # max trees for a BRT. Will be ignored if not building a BRT
+varNames <- c("sst", "ild", "sst_sd", "ssh_sd", "logChl", "logEKE", "distLand", "anchssb") # Names of predictors in the SDM
+targetName <- "pa" # Target variable for the SDM
+aucCutoff <- 10 # If less observations than this cutoff within a month/season etc., AUC will not be calculated
+
+###########################################################################################################
+# An example: 5-year forecast skill for anchovy SDM where training data include between 10 and 15 years of data 
+yrsToTrain <- seq(10, 15) 
+yrsToForecast <- 5
+# Optional: do we want to assess persistence skill? That is: can last year's environmental conditions
+# predict this years species distributions?
+includePersistence <- TRUE
+output <- vector(mode = "list", length = length(yrsToTrain)) # We will save results to a list (a list of lists)
+for (j in 1:length(output)) {
+  output[[j]] <- peelSDM(obs = obs, sdmType = sdmType, varNames = varNames, targetName = targetName,
+                         k = k, tc = tc, lr = lr, max.trees = max.trees, noYrs = yrsToTrain[j], 
+                         yrsToForecast = yrsToForecast, includePersistence = includePersistence)
+}
+```
+
+Summarize skill over 6 retrospective peels
+```{r}
+###########################################################################################################
+# Some quick plots of SDM skill with varying lengths of training data, and varying levels of spatial/temporal aggregation
+# for each forecasting horizon separately
+# First reshape the output list so is easier to work with
+suppressWarnings(rm(sdmSkill1, sdmSkillAll))
+for(b in 1:length(output)) { 
+  sdmSkill1 <- output[[b]]$sdmSkill
+  if(exists("sdmSkillAll")) {
+    sdmSkillAll <- rbind(sdmSkillAll, sdmSkill1)
+  } else {
+    sdmSkillAll <- sdmSkill1
+  }
+}
+
+# Aggregate so skills are averaged across different months/seasons. "year" is the test year
+sdmSkillAllAgg <- aggregate(auc ~ time + space + noYrsTrain + terminalYr + year, sdmSkillAll, FUN = mean, na.rm = TRUE)
+# Add a field converting year to forecast time horizon
+sdmSkillAllAgg$forecastHorizon <- sdmSkillAllAgg$year - sdmSkillAllAgg$terminalYr
+
+```
+
+Comparative plots for forecast performance
+```{r}
+# Plot showing mean AUC skill across all terminal years by spatial and temporal aggregation and forecast horizon
+ggplot(sdmSkillAllAgg) + 
+  geom_boxplot(aes(x = forecastHorizon, y = auc, group = factor(forecastHorizon), fill = forecastHorizon)) +
+  scale_fill_viridis("Forecast \nHorizon", option = "mako") + xlab("Forecast Horizon (Years)") + ylab("Forecast AUC") + 
+  scale_y_continuous(limits = c(0, 1), oob = rescale_none) + theme_bw() + facet_grid(time ~ space, scales = "free")
+
+###########################################################################################################
+# An additional plot showing real/contemporary skill vs persistence skill, if you also calculated and returned those results
+# Reshape the persistence skill outputs
+suppressWarnings(rm(sdmSkillPers1, sdmSkillPersAll))
+for(b in 1:length(output)) { 
+  sdmSkillPers1 <- output[[b]]$sdmSkillPers
+  if(exists("sdmSkillPersAll")) {
+    sdmSkillPersAll <- rbind(sdmSkillPersAll, sdmSkillPers1)
+  } else {
+    sdmSkillPersAll <- sdmSkillPers1
+  }
+}
+
+# Aggregate so skills are averaged across different months/seasons. "year" is the test year
+sdmSkillPersAllAgg <- aggregate(auc ~ time + space + noYrsTrain + terminalYr + year, sdmSkillPersAll, FUN = mean, na.rm = TRUE)
+# Add a field converting year to forecast time horizon
+sdmSkillPersAllAgg$forecastHorizon <- sdmSkillPersAllAgg$year - sdmSkillPersAllAgg$terminalYr
+# Combine with skill assessment from contemporary data
+sdmSkillAllAgg$forecastType <- "contemporary"
+sdmSkillPersAllAgg$forecastType <- "persistence"
+sdmSkillBoth <- rbind(sdmSkillAllAgg, sdmSkillPersAllAgg)
+sdmSkillBoth$horizonType <- interaction(sdmSkillBoth$forecastHorizon, sdmSkillBoth$forecastType)
+
+# A plot showing skill by aggregation level and forecast horizon, now comparing contemporary prediction vs. persistence
+ggplot() + 
+  geom_boxplot(data = sdmSkillBoth, aes(x = forecastHorizon, y = auc, group = factor(horizonType), fill = forecastHorizon)) +
+  scale_fill_viridis("Forecast \nHorizon", option = "mako") + xlab("Forecast Horizon (Years)") + ylab("Forecast AUC") + 
+  scale_y_continuous(limits = c(0, 1), oob = rescale_none) + theme_bw() + facet_grid(time ~ space)
+
+```
