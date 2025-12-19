@@ -118,15 +118,6 @@ extractEnvVars <- function(obs, lag) {
   bathym <- getBathym(points = obs, desired.diameter = 0.1, func = "mean")
   obs$bathym <- bathym$bathym_mean_0.1
   
-  ###########################################################################################################
-  # Anchovy SSB (from Hinchliffe et al. 2025)
-  anch$year <- anch$Model.Y.S
-  anch$year <- as.numeric(gsub("-1|-2", "", anch$year))
-  anch <- subset(anch, !is.na(anch$SSB..mt.))
-  anch$anchssb <- anch$SSB..mt.
-  # Join to observations
-  obs$year <- year(obs$date)
-  obs <- left_join(obs, anch[c("year", "anchssb")], by = "year")
   
   ###########################################################################################################
   # Save observations with environmental variables extracted

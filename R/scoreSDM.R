@@ -3,7 +3,6 @@
 # test data (1 year forecast)
 # Contact Barbara.Muhling@noaa.gov
 ###########################################################################################################
-
 scoreSDM <- function(subObs, sdmType, varNames, targetName, k, tc, lr, max.trees, yrsToForecast, includePersistence) {
   # Define the training and test forecast years
   yrs <- unique(sort(subObs$year)) # Years in the observational dataset
@@ -18,7 +17,6 @@ scoreSDM <- function(subObs, sdmType, varNames, targetName, k, tc, lr, max.trees
   }
   
   # Otherwise, build an SDM using helper function
-  source("./R/buildSDM.R")
   mod1 <- buildSDM(sdmType = sdmType, train = train, varNames = varNames, targetName = targetName, 
                    k = k, tc = tc, lr = lr, max.trees = max.trees)
   # summary(mod1) # If you want to check convergence etc. But GAMs/BRTs nearly always converge unless parameters v inappropriate

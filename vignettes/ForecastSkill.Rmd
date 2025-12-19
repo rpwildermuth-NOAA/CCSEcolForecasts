@@ -24,8 +24,10 @@ library(viridis)
 
 ###########################################################################################################
 # Load the helper functions you will need
-source("./R/scoreSDM.R")
-source("./R/testSkillSDM.R")
+source("../R/buildSDM.R")
+source("../R/scoreSDM.R")
+source("../R/testSkillSDM.R")
+source("../R/peelSDM.R")
 ```
 
 # Perform Leave-Future-Out cross-validation to test forecast skill of an SDM
@@ -36,7 +38,7 @@ Load the the full dataset
 # This is now updated to include variables extracted at a lag of 1 year, which are used to calculate
 # persistence skill (variables labeled with "_lag1")
 # Is assumed that the columns "lon", "lat", and "date" are present and complete
-obs <- readRDS("./data/combinedBioObs_envExtracted.rds")
+obs <- readRDS("../data/combinedBioObs_envExtracted.rds")
 # If observations don't have a "year", "month" and "quarter" columns, add them. Will need a "date" column to get them
 if(!"year" %in% colnames(obs)) {
   obs$year <- year(obs$date)  
@@ -85,6 +87,7 @@ for (j in 1:length(output)) {
                          k = k, tc = tc, lr = lr, max.trees = max.trees, noYrs = yrsToTrain[j], 
                          yrsToForecast = yrsToForecast, includePersistence = includePersistence)
 }
+#!!RW: maybe don't want to report all the plots from this process?
 ```
 
 Summarize skill over 6 retrospective peels

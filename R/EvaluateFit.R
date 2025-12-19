@@ -106,9 +106,11 @@ peelSDM <- function(obs, sdmType, varNames, targetName, k, tc, lr, max.trees, no
   
   # Return results: at present, returning as a list
   if(includePersistence == TRUE) {
-    out <- list("sdm" = mod$sdm, "test" = mod$test, "modelEval" = evalOutputs, "sdmSkill" = sdmSkill, "sdmSkillPers" = sdmSkillPers)
+    out <- list("sdm" = mod$sdm, "test" = mod$test, "modelEval" = evalOutputs, 
+                "sdmSkill" = sdmSkill, "sdmSkillPers" = sdmSkillPers)
   } else {
-    out <- list("sdm" = mod$sdm, "test" = mod$test, "modelEval" = evalOutputs, "sdmSkill" = sdmSkill)
+    out <- list("sdm" = mod$sdm, "test" = mod$test, "modelEval" = evalOutputs, 
+                "sdmSkill" = sdmSkill)
   }
   return(out)
 }
