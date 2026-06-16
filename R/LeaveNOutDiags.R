@@ -5,7 +5,7 @@
 
 
 #Leave One year Out analysis
-LOO_eval <- function(DataInput, gbm.x, gbm.y, lr, tc){
+EvalLOO <- function(DataInput, gbm.x, gbm.y, lr, tc){
   DataInput$date <- as.POSIXct(DataInput$date, format = '%Y-%m-%d')
   DataInput$Year <- format(DataInput$date, "%Y")
   Evaluations_LOO <- as.data.frame(matrix(data=0,nrow=1,ncol=4))
@@ -42,7 +42,7 @@ LOO_eval <- function(DataInput, gbm.x, gbm.y, lr, tc){
 #######
 #Make function to 75/25 split AUC test. 
 #This is to 'repeat' what Elliot thinks they did for EcoCast (Kylie disagrees, see next function)
-eval_7525 <- function(DataInput, gbm.x, gbm.y, lr, tc=tc, family, retainPct = 0.75){
+evalPct <- function(DataInput, gbm.x, gbm.y, lr, tc=tc, family, retainPct = 0.75){
   Evaluations_7525 <- as.data.frame(matrix(data=0,nrow=1,ncol=5))
   colnames(Evaluations_7525) <- c("Deviance","AUC","TSS","Sensitivity", "Specificity")
   

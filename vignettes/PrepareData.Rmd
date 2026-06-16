@@ -17,14 +17,13 @@ library(here)
 library(sf)
 library(lubridate)
 library(dplyr)
-library(tidyr)
 library(corrplot)
 
 # Load helper functions to extract environmental predictors
 # These rely on environmental netcdfs, which are stored in different places!
 source("../R/getROMS.R") # ROMS ocean model variables
 # source("./R/getMOM6_gridded.R") # MOM6 ocean model variables
-source("../R/getCMEMS_l4chl.R") # CMEMS daily L4 chl
+# source("../R/getCMEMS_l4chl.R") # CMEMS daily L4 chl
 source("../R/getDistLand.R") # Distance to nearst land based on coast shp
 source("../R/getBathym.R") # ETOPO bathymetry
 ```
@@ -80,9 +79,8 @@ Next, we pull together physical covariate data from other public online database
 Note that anchovy biomass values are model estimates from the assessment model developed by [Hinchliffe et al. (2025)](https://doi.org/10.1093/icesjms/fsae177) and updated with catch and survey data only for 2022 and 2023 and no age compositions or weight at age for those years.
 ```{r, getCovars}
 # Load datasets: these currently live in project ./data
-# coast <- sf::read_sf("./data/EPOCoast60_noGI.shp") # The coast shp
-coast <- tigris::coastline() #!!RW: have to check if this will work for demonstration purposes
-#!!RW: these need to be integrated into extractEnvVars()
+coast <- sf::read_sf("C:/Users/r.wildermuth/Documents/MapFiles/EPOCoast60_noGI.shp") # The coast shp
+# coast <- tigris::nation() #!!RW: doesn't have other country boundaries, for now use Barb's file
 
 
 ###########################################################################################################

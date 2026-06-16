@@ -3,6 +3,7 @@
 # test data (1 year forecast)
 # Contact Barbara.Muhling@noaa.gov
 ###########################################################################################################
+
 scoreSDM <- function(subObs, sdmType, varNames, targetName, k, tc, lr, max.trees, yrsToForecast, includePersistence) {
   # Define the training and test forecast years
   yrs <- unique(sort(subObs$year)) # Years in the observational dataset

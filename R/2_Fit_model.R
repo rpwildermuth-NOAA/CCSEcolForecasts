@@ -21,7 +21,8 @@ library(caret)  # For data partitioning
 
 
 #read our dataset with the presences-absences and the env. data
-MOM6variables=read.csv("C:\\Users\\nereo\\Dropbox (Personal)\\Nerea\\NOAA\\PROJECTS & COLLABORATIONS\\PROJECTS\\Forecast\\Swordfish_forecast\\2_build_model/swor_dataframe_MOM6_native.csv", sep=",")
+# MOM6variables=read.csv("C:\\Users\\nereo\\Dropbox (Personal)\\Nerea\\NOAA\\PROJECTS & COLLABORATIONS\\PROJECTS\\Forecast\\Swordfish_forecast\\2_build_model/swor_dataframe_MOM6_native.csv", sep=",")
+MOM6variables=read.csv("C:/Users/r.wildermuth/Documents/CEFI/SDMClimateForecasts/inputData/swor_dataframe_MOM6_native_daily.csv", sep=",")
 
 data=MOM6variables
 names(data)
@@ -114,19 +115,19 @@ Species <- "SWOR"
 res1.tc3.lr01 <- fit.brt(data=train, gbm.x=gbm.x, gbm.y="PresAbs",lr=0.01) 
 summary(res1.tc3.lr01) #This function give us the % importance of each env. variable to explain the distribution of our species
 summary_res <- summary(res1.tc3.lr01)
-setwd("C:\\Users\\nereo\\Dropbox (Personal)\\Nerea\\NOAA\\PROJECTS & COLLABORATIONS\\PROJECTS\\Forecast\\Swordfish_forecast\\3_output/native/")
-write.csv(summary_res, file = "summary_results_native.csv", row.names = FALSE)
+# setwd("C:\\Users\\nereo\\Dropbox (Personal)\\Nerea\\NOAA\\PROJECTS & COLLABORATIONS\\PROJECTS\\Forecast\\Swordfish_forecast\\3_output/native/")
+# write.csv(summary_res, file = "summary_results_native.csv", row.names = FALSE)
 
 dev_eval(res1.tc3.lr01)# deviance explained by the model
 summary_dev <- dev_eval(res1.tc3.lr01)
-write.csv(summary_dev, file = "summary_dev_single_native.csv", row.names = FALSE)
+# write.csv(summary_dev, file = "summary_dev_single_native.csv", row.names = FALSE)
 
 windows(20,20)
 gbm.plot(res1.tc3.lr01, smooth=TRUE, plot.layout = c(4,4), write.title=T) #response curves/ fitted functions
-dev.print(png, file = "partial_curves_native.png", width = 12, height = 8, units = "in", res = 300)
-dev.off()
+# dev.print(png, file = "partial_curves_native.png", width = 12, height = 8, units = "in", res = 300)
+# dev.off()
 
-saveRDS(res1.tc3.lr01,"C:\\Users\\nereo\\Dropbox (Personal)\\Nerea\\NOAA\\PROJECTS & COLLABORATIONS\\PROJECTS\\Forecast\\Swordfish_forecast\\3_output/native/SWOR.res1.tc3.lr03.single_native.rds")
+# saveRDS(res1.tc3.lr01,"C:\\Users\\nereo\\Dropbox (Personal)\\Nerea\\NOAA\\PROJECTS & COLLABORATIONS\\PROJECTS\\Forecast\\Swordfish_forecast\\3_output/native/SWOR.res1.tc3.lr03.single_native.rds")
 #res1.tc3.lr01=readRDS("/Volumes/Triple_Bottom_Line/Nerea_working/Hawaii/Model_Results/Nuevo/YFT.res1.tc3.lr03.single_1res.rds")
 
 
@@ -135,14 +136,14 @@ saveRDS(res1.tc3.lr01,"C:\\Users\\nereo\\Dropbox (Personal)\\Nerea\\NOAA\\PROJEC
 library(ggplot2)
 #setwd("/Volumes/Triple_Bottom_Line/Nerea_working/Hawaii/Model_Results/Nuevo/")
 ggInfluence(res1.tc3.lr01)
-dev.print(png, file = "importance_noPh.png", width = 12, height = 8, units = "in", res = 300)
-dev.off()
+# dev.print(png, file = "importance_noPh.png", width = 12, height = 8, units = "in", res = 300)
+# dev.off()
 
 
 brt1.prerun_m<- plot.gbm.4list(res1.tc3.lr01)
 brt1.boot_yft <- gbm.bootstrap.functions(res1.tc3.lr01, list.predictors=brt1.prerun_m, n.reps=200)
 brt1.boot_yft
-saveRDS(brt1.boot_yft,"C:\\Users\\nereo\\Dropbox (Personal)\\Nerea\\NOAA\\PROJECTS & COLLABORATIONS\\PROJECTS\\Forecast\\Swordfish_forecast\\3_output/brt1.boot_yft.rds")
+# saveRDS(brt1.boot_yft,"C:\\Users\\nereo\\Dropbox (Personal)\\Nerea\\NOAA\\PROJECTS & COLLABORATIONS\\PROJECTS\\Forecast\\Swordfish_forecast\\3_output/brt1.boot_yft.rds")
 #
 
 
@@ -151,7 +152,7 @@ windows(20,20)
 plots=ggPD_boot_compare(gbm.object1 = res1.tc3.lr01, n.plots = 4, col.line = "darkgreen", 
                         list.4.preds1=brt1.prerun_m,  booted.preds1=brt1.boot_yft$function.preds,
                         smooth = T, col.smooth="blue",cis=c(0.025, 0.975), rug = TRUE, type.ci = "ribbon",rug.pos = "t", n.reps = 15, nrow = 2, ncol = 3)
-ggsave("partial_boosted_curves.png",plot = plots, width = 40, height = 20, units = "cm")
+# ggsave("partial_boosted_curves.png",plot = plots, width = 40, height = 20, units = "cm")
 
 
 
@@ -166,7 +167,7 @@ ggsave("partial_boosted_curves.png",plot = plots, width = 40, height = 20, units
 #fit 10 BRT models to estimate CV
 quartz(width = 12, height = 8)
 res1.tc3.lr01.10models <- fit.brt.n10(data=train,gbm.x= gbm.x, gbm.y="PresAbs",lr=0.01, iterations=10)
-saveRDS(res1.tc3.lr01.10models,"SWOR.res1.tc3.lr03.10iter_1res_native.rds")
+# saveRDS(res1.tc3.lr01.10models,"SWOR.res1.tc3.lr03.10iter_1res_native.rds")
 
 
 
@@ -183,10 +184,10 @@ sd=sd(SDR_10models_evals$V1)
 
 
 
-summary_1_mean <- mean
-write.csv(summary_1_mean, file = "summary_1_mean_native.csv", row.names = FALSE)
-summary_1_sd <- sd
-write.csv(summary_1_sd, file = "summary_1_sd_native.csv", row.names = FALSE)
+# summary_1_mean <- mean
+# write.csv(summary_1_mean, file = "summary_1_mean_native.csv", row.names = FALSE)
+# summary_1_sd <- sd
+# write.csv(summary_1_sd, file = "summary_1_sd_native.csv", row.names = FALSE)
 
 
 ##############################################################
@@ -198,8 +199,8 @@ write.csv(summary_1_sd, file = "summary_1_sd_native.csv", row.names = FALSE)
 
 #Leave One year Out analysis
 LOO_eval <- function(DataInput, gbm.x, gbm.y, lr=lr, tc){
-  DataInput <- data
-  DataInput$date = as.POSIXct(DataInput$date, format = '%Y-%m-%d')
+  # DataInput <- data
+  DataInput$date = as.POSIXct(DataInput$date, format = '%m/%d/%Y')#format = '%Y-%m-%d')
   DataInput$Year <- format(DataInput$date, "%Y")
   Evaluations_LOO <- as.data.frame(matrix(data=0,nrow=1,ncol=4))
   colnames(Evaluations_LOO) <- c("k","Deviance","AUC","TSS")
@@ -210,7 +211,8 @@ LOO_eval <- function(DataInput, gbm.x, gbm.y, lr=lr, tc){
     DataInput_test <- DataInput[DataInput$Year==y,]
     DataInput.loo <- gbm.step(data=DataInput_train, gbm.x= gbm.x, gbm.y = c("PresAbs"), 
                               family="bernoulli", tree.complexity=tc,
-                              learning.rate = lr, bag.fraction = 0.6)
+                              learning.rate = lr, bag.fraction = 0.6,
+                              plot.main = FALSE)
     preds <- predict.gbm(DataInput.loo, DataInput_test,
                          n.trees=DataInput.loo$gbm.call$best.trees, type="response")
     dev <- calc.deviance(obs=DataInput_test$PresAbs, pred=preds, calc.mean=TRUE)
@@ -290,19 +292,19 @@ SDR.100.eval <- eval_100_percent(DataInput_Fit,gbm.x=gbm.x, gbm.y="PresAbs",lr=0
 
 
 
-saveRDS(SDR.loo.eval,paste("SWOR_SDR.loo.eval_native.rds"))
-saveRDS(SDR.7525.eval,paste("SWOR_SDR.7525.eval_native.rds"))
-saveRDS(SDR.100.eval,paste("SWOR_SDR.100.eval_native.rds"))
-
-
-SDR.7525.eval <- SDR.7525.eval
-write.csv(SDR.7525.eval, file = "SDR.7525.eval_native.csv", row.names = FALSE)
-
-SDR.loo.eval <- SDR.loo.eval
-write.csv(SDR.loo.eval, file = "SDR.loo.eval_native.csv", row.names = FALSE)
-
-SDR.100.eval <- SDR.100.eval
-write.csv(SDR.100.eval, file = "SDR.100.eval_native.csv", row.names = FALSE)
+# saveRDS(SDR.loo.eval,paste("SWOR_SDR.loo.eval_native.rds"))
+# saveRDS(SDR.7525.eval,paste("SWOR_SDR.7525.eval_native.rds"))
+# saveRDS(SDR.100.eval,paste("SWOR_SDR.100.eval_native.rds"))
+# 
+# 
+# SDR.7525.eval <- SDR.7525.eval
+# write.csv(SDR.7525.eval, file = "SDR.7525.eval_native.csv", row.names = FALSE)
+# 
+# SDR.loo.eval <- SDR.loo.eval
+# write.csv(SDR.loo.eval, file = "SDR.loo.eval_native.csv", row.names = FALSE)
+# 
+# SDR.100.eval <- SDR.100.eval
+# write.csv(SDR.100.eval, file = "SDR.100.eval_native.csv", row.names = FALSE)
 
 
 

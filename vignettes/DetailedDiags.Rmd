@@ -76,14 +76,15 @@ varNames <- c("sst", "ild", "sst_sd", "ssh_sd", "logChl", "logEKE", "distLand", 
 targetName <- "pa" # Target variable for the SDM
 
 # Leave-one-out cross-validation
-SDR.loo.eval <-LOO_eval(DataInput=obs, gbm.x=varNames, gbm.y=targetName,lr=lr, tc=tc)
+# !Note: This takes a while
+SDR.loo.eval <-EvalLOO(DataInput=obs, gbm.x=varNames, gbm.y=targetName,lr=lr, tc=tc)
 
 # test with 25% of the full dataset
-SDR.7525.eval <- eval_7525(DataInput= obs,gbm.x=varNames, gbm.y=targetName,lr=lr, tc=tc, retainPct = 0.75)
+SDR.7525.eval <- evalPct(DataInput= obs,gbm.x=varNames, gbm.y=targetName,lr=lr, tc=tc, retainPct = 0.75)
 
 # compare to full model fit 
 #!!RW: Is this just the same as buildSDM()?
-SDR.100.eval <- eval_7525(DataInput= obs,gbm.x=varNames, gbm.y=targetName,lr=lr, tc=tc, retainPct = 1)
+SDR.100.eval <- evalPct(DataInput= obs,gbm.x=varNames, gbm.y=targetName,lr=lr, tc=tc, retainPct = 1)
 
 comp75v100 <- bind_rows(SDR.7525.eval, SDR.100.eval) %>% mutate(retainPct = c(75, 100))
 ```

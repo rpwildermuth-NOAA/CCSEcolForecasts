@@ -6,6 +6,10 @@ library(lubridate)
 library(sf)
 library(stars)
 library(cubelyr)
+library(nngeo)
+library(pROC)
+library(dismo)
+
 
 # modified from code in ProcessData.Rmd in recrmntDFA
 datPath <- "C:/Users/r.wildermuth/Documents/CEFI/SDMClimateForecasts/"
@@ -16,11 +20,12 @@ cpsFiles <- expand.grid(1:12, 1998:2023, "SDMs.nc") %>%
   pull(sdmFile)
 
 cpsFiles <- paste0(datPath, "SDMoutput/HistoricalCPSGAMsBRTsERDDAPROMSDomain/", cpsFiles)
-cpsSDMs <- read_stars(cpsFiles, proxy = FALSE, quiet = TRUE)
+cpsSDMs <- read_stars(cpsFiles, proxy = FALSE, quiet = TRUE, along = "time")
 # Time fix from Barb
 wrongTimes <- as.Date(st_get_dimension_values(cpsSDMs, "time"))
 wrongTimes[c(1, length(wrongTimes))] # Can see is wrong baseline
-rightTimes <- wrongTimes + 693579 # 693579 is the number of days since 0000-00-00
+# rightTimes <- wrongTimes + 693579 # 693579 is the number of days since 0000-00-00
+rightTimes <- wrongTimes + 10226 # 35794 is the number of days since 1970-01-01
 cpsSDMs <- st_set_dimensions(cpsSDMs, 3, values = rightTimes, names = "time")
 st_get_dimension_values(cpsSDMs, "time")[c(1, length(wrongTimes))] # Check times look ok now
 
@@ -96,8 +101,9 @@ st_get_dimension_values(sardMackMon, "time")
 sardMackMon <- aperm(sardMackMon, c(2,3,1))
 sardMackMon[sardMackMon == 0] <- NA
 
+
 ggplot() +
-  geom_stars(data = sardMackMon, aes(fill = coocrSarChb), color = NA) +
+  geom_stars(data = sardMackMon[,,,1:6], aes(fill = coocrSarChb), color = NA) +
   pac.coast +
   geom_sf(data = ccAtl, color = "black", size = 1.5, fill = NA) +
   scale_fill_gradientn(colours = mycols[3:9],
@@ -106,7 +112,7 @@ ggplot() +
                        na.value = "transparent") +
   guides(fill = guide_colorbar(barwidth=0.5, barheight=5)) +
   coord_sf(xlim = c(-130, -115), ylim = c(28, 50)) +
-  facet_wrap(~time, nrow = 3) +
+  facet_wrap(~time, nrow = 2) +
   theme_minimal()
 
 # plot multiple attributes with facet_grid (from: https://rpubs.com/michaeldorman/646276)
@@ -157,6 +163,36 @@ coocrObs <- coocrObs %>% select("cruise", "ship", "haul", "collection",
                                              "stop_latitude", "stop_longitude", 
                                              "equilibrium_time", "haulback_time"))
 
+# get presence/absence of sardine in pacmac hauls
+presabsSardinMac <- left_join(x = pacmacHauls, y = sardHauls,  
+                               by = c("cruise", "ship", "haul", "collection", 
+                                      "start_latitude", "start_longitude", "stop_latitude",
+                                      "stop_longitude", "equilibrium_time", "haulback_time"))
+presabsSardinMac <- presabsSardinMac %>% select("cruise", "ship", "haul", "collection", 
+                                                "start_latitude", "start_longitude", "stop_latitude",
+                                                "stop_longitude", "equilibrium_time", "haulback_time",
+                                                scientific_name.x, presence_only.x,
+                                                scientific_name.y, presence_only.y) %>%
+                      mutate(pa = as.numeric(!is.na(scientific_name.y)))
+presabsSardinMac %>% summarize(macAndSard = sum(pa),
+                               macNoSard = sum(pa == 0))
+317/nrow(presabsSardinMac)
+# ~70% of hauls with P. mackerel also have P. sardine
+
+presabsMacinSard <- left_join(x = sardHauls, y = pacmacHauls,  
+                              by = c("cruise", "ship", "haul", "collection", 
+                                     "start_latitude", "start_longitude", "stop_latitude",
+                                     "stop_longitude", "equilibrium_time", "haulback_time"))
+presabsMacinSard <- presabsMacinSard %>% select("cruise", "ship", "haul", "collection", 
+                                                "start_latitude", "start_longitude", "stop_latitude",
+                                                "stop_longitude", "equilibrium_time", "haulback_time",
+                                                scientific_name.x, presence_only.x,
+                                                scientific_name.y, presence_only.y) %>%
+                      mutate(pa = as.numeric(!is.na(scientific_name.y)))
+presabsMacinSard %>% summarize(sardAndMac = sum(pa),
+                               sardNoMac = sum(pa == 0))
+317/nrow(presabsMacinSard)
+
 # see if %sard by weight can be calculated
 # max incidental take of sardine in other directed CPS fisheries is 20% of landed weight when sardine are overfished
 # see sec4.5.1 Rebuilding Plan for Pacific Sardine, https://www.pcouncil.org/documents/2023/06/coastal-pelagic-species-fishery-management-plan.pdf/
@@ -185,6 +221,8 @@ coocrObs %>% filter(scientific_name == "Sardinops sagax") %>% nrow()
 # number of co-occuring hauls with sardine weight above limit
 landedPct %>% filter(scientific_name == "Sardinops sagax",
                      pctLandWt >= 20) %>% nrow()
+155/317
+# ~49% of hauls with both P. mackerel and P. sardine are above the percentage landing limit
 
 # look at spread of co-occurrences in space and time
 coocrObs %>% ggplot(aes(x = stop_longitude, y = stop_latitude)) + 
@@ -207,3 +245,39 @@ landedPct %>% filter(scientific_name == "Sardinops sagax",
   mutate(Mo = month(equilibrium_time),
          Yr = year(equilibrium_time)) %>%
   summary()
+
+# Figure out how to overlap predictions in sardMackSDMs with presence/absence in presabsSardinMac
+presabsSardinMac <- presabsSardinMac %>% mutate(time = date(equilibrium_time))
+
+paSardinMac <- presabsSardinMac %>% st_as_sf(coords=c("stop_longitude","stop_latitude"),
+                                             crs="+proj=longlat +ellps=WGS84 +datum=WGS84",
+                                             remove=FALSE)
+# probably need to use extraction function Stephanie and Owen figured out
+# Try Owen's point:nearest neighbor method
+sfSardMackSDMs <- sardMackSDMs %>% select(coocrSarChb) %>% st_as_sf(as_points = TRUE)
+# only need dates with pres/abs data available
+obsDates <- as.character(unique(presabsSardinMac$time))
+obsDates <- obsDates[-grep("2024", obsDates)]
+sfSardMackSDMs <- sfSardMackSDMs %>% select(all_of(obsDates))
+# spatial join using nearest neighbors
+# loop over observation days
+paPreds <- tibble(time = '', 
+                  pa = 0,
+                  pred = 0)[0,]
+for(dd in 1:length(obsDates)){
+  trawl_nn <- st_join(paSardinMac, sfSardMackSDMs[, dd], st_nn, k=1)
+  trawl_nn <- trawl_nn %>% select(time, pa, all_of(obsDates[dd])) %>% 
+                filter(time == obsDates[dd]) %>%
+                rename(pred = obsDates[dd])
+  paPreds <- rbind(paPreds, trawl_nn)
+}
+
+# calculate point-wise AUC
+ptAUC <- auc(paPreds$pa, paPreds$pred, direction = "<", quiet = TRUE)
+# RW: not great performance :(
+
+# do like Nerea does it
+pres <- paPreds %>% filter(pa == 1) %>% pull(pred)
+abs <- paPreds %>% filter(pa == 0) %>% pull(pred)
+evalPtAUC <- evaluate(p=pres, a=abs)
+evalPtAUC
