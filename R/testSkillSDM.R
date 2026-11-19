@@ -83,6 +83,28 @@ testSkillSDM <- function(mod, targetName, aucCutoff = 10, usePersistence) {
     }
      skill$nrows[i] <- nrow(testAgg) 
   }
+  
+  # Course annual auc at full domain
+  years <- aggregate(eval(as.name(targetName)) ~ year, test, FUN = length)
+  names(years) <- c("year", "nObs")
+  years <- subset(years, nObs >= aucCutoff)
+  years <- years %>% mutate(value = NA, time = "year", space = 999, nrows = NA, auc = NA)
+  
+  # for now just evaluate AUC over all observations in given year
+  for(yy in 1:nrow(years)){
+    yr <- years$year[yy]
+    
+    # Subset/aggregate test data accordingly. Just for one forecast year at a time
+    toEval <- subset(test, year == years$year[yy])
+    
+    if(nrow(toEval) < aucCutoff) {
+      next
+    } else {
+      years$auc[yy] <- auc(toEval[, targetName], toEval$predAssess, direction = "<", quiet = TRUE)[1]
+    }
+    years$nrows[yy] <- nrow(toEval) 
+  }
+  skill <- rbind(skill, years)
   # Return the df showing skill at different levels of aggregation
   return(skill)
 }

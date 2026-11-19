@@ -30,7 +30,7 @@ scoreSDM <- function(subObs, sdmType, varNames, targetName, k, tc, lr, max.trees
   if(includePersistence == TRUE) {
     newEnvVars <- test[c(grepl("_lag1", colnames(test)))] 
     colnames(newEnvVars) <- gsub("_lag1", "", colnames(newEnvVars))
-    newEnvVars$pa <- test$pa
+    newEnvVars$pa <- test$pa # !!RW: this likely needs to be generalized for 'targetName'
     test$predPersist <- predict(mod1, newEnvVars, type = "response")
   }
   
